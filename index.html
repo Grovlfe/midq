@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MIDQ · MIDI 转 按键精灵 Q 文件</title>
+<meta name="description" content="MIDQ —— 把 MIDI 精确转换为按键精灵 Q 脚本，时间与拍子严格对齐原曲。作者 珂眠。">
+<meta name="theme-color" content="#7C3AED">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237C3AED'/%3E%3Cstop offset='.55' stop-color='%234F46E5'/%3E%3Cstop offset='1' stop-color='%23EC4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M26 44V22l16-4v22' stroke='%23fff' stroke-width='3' fill='none'/%3E%3Ccircle cx='22' cy='44' r='5' fill='%23fff'/%3E%3Ccircle cx='38' cy='40' r='5' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+/* ========== 基础与主题 ========== */
+:root{
+  --bg:#FBF8FF; --bg-deep:#F4EEFF;
+  --card:#FFFFFF; --card-soft:#FBF7FF;
+  --ink:#231A35; --muted:#786A92; --faint:#A597BC;
+  --line:#EADFF9; --line-strong:#DCCBF6;
+  --violet:#7C3AED; --indigo:#4F46E5; --pink:#EC4899; --rose:#F43F5E; --blue:#2563EB;
+  --lilac:#EDE9FE; --blush:#FDF2F8; --sky:#EFF6FF;
+  --ok:#0F9F6E; --ok-bg:#E9FBF3; --bad:#E11D48; --bad-bg:#FFF1F4;
+  --grad:linear-gradient(120deg,#7C3AED 0%,#4F46E5 45%,#EC4899 100%);
+  --grad-soft:linear-gradient(120deg,rgba(124,58,237,.10),rgba(79,70,229,.08) 45%,rgba(236,72,153,.10));
+  --ring:0 0 0 4px rgba(124,58,237,.16);
+  --shadow:0 12px 36px rgba(96,60,190,.09), 0 2px 8px rgba(96,60,190,.05);
+  --shadow-sm:0 4px 14px rgba(96,60,190,.07);
+  --radius:18px; --radius-sm:12px; --radius-xs:10px;
+  --mono:ui-monospace,'Cascadia Code',Consolas,'Courier New',monospace;
+  --sans:ui-sans-serif,-apple-system,'PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif;
+}
+[data-theme="blue"]{
+  --bg:#F5FAFF; --bg-deep:#EAF4FF; --line:#DCE9FB; --line-strong:#C8DDF7;
+  --violet:#2563EB; --indigo:#4F46E5; --pink:#0EA5E9; --rose:#3B82F6;
+  --lilac:#E0F2FE; --blush:#EFF6FF; --sky:#F0F9FF;
+  --grad:linear-gradient(120deg,#2563EB 0%,#4F46E5 45%,#22D3EE 100%);
+  --grad-soft:linear-gradient(120deg,rgba(37,99,235,.10),rgba(79,70,229,.08) 45%,rgba(34,211,238,.12));
+  --ring:0 0 0 4px rgba(37,99,235,.16);
+  --shadow:0 12px 36px rgba(30,80,190,.09), 0 2px 8px rgba(30,80,190,.05);
+}
+[data-theme="sakura"]{
+  --bg:#FFF8FB; --bg-deep:#FFEFF6; --line:#F9DDE9; --line-strong:#F5C9DB;
+  --violet:#EC4899; --indigo:#F43F5E; --pink:#A78BFA; --rose:#E11D48;
+  --lilac:#FDECF5; --blush:#FFF1F6; --sky:#FFF5F8;
+  --grad:linear-gradient(120deg,#EC4899 0%,#F43F5E 48%,#A78BFA 100%);
+  --grad-soft:linear-gradient(120deg,rgba(236,72,153,.10),rgba(244,63,94,.08) 48%,rgba(167,139,250,.12));
+  --ring:0 0 0 4px rgba(236,72,153,.16);
+  --shadow:0 12px 36px rgba(200,60,130,.10), 0 2px 8px rgba(200,60,130,.05);
+}
+[data-theme="lilac"]{
+  --bg:#FBF9FF; --bg-deep:#F3EDFF; --line:#E8DFFB; --line-strong:#DBCDF8;
+  --violet:#8B5CF6; --indigo:#6366F1; --pink:#C084FC; --rose:#A78BFA;
+  --lilac:#F1EBFF; --blush:#FAF5FF; --sky:#F6F2FF;
+  --grad:linear-gradient(120deg,#8B5CF6 0%,#6366F1 50%,#C084FC 100%);
+  --grad-soft:linear-gradient(120deg,rgba(139,92,246,.10),rgba(99,102,241,.08) 50%,rgba(192,132,252,.12));
+  --ring:0 0 0 4px rgba(139,92,246,.16);
+  --shadow:0 12px 36px rgba(110,70,200,.09), 0 2px 8px rgba(110,70,200,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--sans); background:var(--bg); color:var(--ink);
+  font-size:14px; line-height:1.62; -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+img,svg{display:block}
+.hidden{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ========== 背景光斑（装饰层，独立绝对定位） ========== */
+.aura{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;aria-hidden:true}
+.aura i{position:absolute;display:block;border-radius:50%;filter:blur(70px);opacity:.55}
+.aura .a1{width:520px;height:520px;left:-140px;top:-180px;background:radial-gradient(circle,rgba(124,58,237,.55),rgba(124,58,237,0) 70%)}
+.aura .a2{width:560px;height:560px;right:-160px;top:-120px;background:radial-gradient(circle,rgba(236,72,153,.42),rgba(236,72,153,0) 70%)}
+.aura .a3{width:600px;height:600px;left:34%;bottom:-320px;background:radial-gradient(circle,rgba(79,70,229,.36),rgba(79,70,229,0) 70%)}
+
+/* ========== 许可门 ========== */
+.gate{position:relative;z-index:2;min-height:100vh;display:grid;place-items:center;padding:28px 18px 40px}
+.gate-card{
+  width:100%;max-width:430px;background:rgba(255,255,255,.86);
+  border:1px solid var(--line);border-radius:26px;padding:30px 26px 24px;
+  box-shadow:0 30px 70px rgba(96,60,190,.14), 0 4px 14px rgba(96,60,190,.06);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+.brand-mark{width:52px;height:52px;border-radius:15px;background:var(--grad);display:grid;place-items:center;box-shadow:0 8px 20px rgba(124,58,237,.28)}
+.brand-mark svg{width:26px;height:26px}
+.gate h1{
+  font-size:34px;line-height:1.05;letter-spacing:.06em;font-weight:800;margin-top:18px;
+  background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.gate .sub{margin-top:8px;color:var(--muted);font-size:13.5px;letter-spacing:.01em}
+.gate-form{margin-top:22px}
+.gate-label{font-size:11.5px;letter-spacing:.14em;color:var(--faint);font-weight:600}
+.gate-input{
+  width:100%;margin-top:8px;height:54px;padding:0 16px;border-radius:14px;
+  border:1.5px solid var(--line-strong);background:#fff;color:var(--ink);
+  font-family:var(--mono);font-size:15px;letter-spacing:.06em;
+  transition:border-color .18s, box-shadow .18s;
+}
+.gate-input::placeholder{color:#B8AACD;letter-spacing:.04em;font-size:13.5px}
+.gate-input:focus{outline:none;border-color:var(--violet);box-shadow:var(--ring)}
+.gate-btn{
+  width:100%;margin-top:14px;height:52px;border-radius:14px;color:#fff;font-weight:700;font-size:15px;
+  letter-spacing:.02em;background:var(--grad);box-shadow:0 10px 24px rgba(124,58,237,.26);
+  transition:transform .14s, box-shadow .18s, filter .18s;
+}
+.gate-btn:hover{filter:brightness(1.04);box-shadow:0 12px 28px rgba(124,58,237,.32)}
+.gate-btn:active{transform:translateY(1px)}
+.gate-btn:disabled{opacity:.6;cursor:not-allowed;box-shadow:none}
+.gate-err{min-height:20px;margin-top:10px;color:var(--bad);font-size:12.5px}
+.gate-hint{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line);color:var(--faint);font-size:11.5px;line-height:1.8}
+.gate-hint b{color:var(--muted);font-weight:600}
+.gate-copy{margin-top:10px;text-align:center;font-size:11.5px;color:var(--muted);line-height:1.7}
+.gate-copy .muted{color:var(--faint);font-size:11px}
+.gate-copy .sep{margin:0 5px;opacity:.5}
+.gate-copy b{color:var(--violet);font-weight:700}
+.shake{animation:shake .38s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+
+/* ========== 顶栏 ========== */
+.topbar{
+  position:sticky;top:0;z-index:20;
+  display:flex;align-items:center;gap:12px;padding:10px 16px;
+  background:rgba(251,248,255,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--line);
+}
+.topbar .logo{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.topbar .logo .mark{width:32px;height:32px;border-radius:10px;background:var(--grad);display:grid;place-items:center;box-shadow:0 4px 12px rgba(124,58,237,.24)}
+.topbar .logo .mark svg{width:17px;height:17px}
+.topbar .logo .name{font-weight:800;letter-spacing:.08em;font-size:19px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.topbar .logo .tag{display:none;font-size:11px;color:var(--faint);letter-spacing:.06em}
+.copyright-chip{
+  margin-left:auto;display:flex;align-items:center;gap:7px;
+  padding:6px 11px;border-radius:999px;background:var(--grad-soft);
+  border:1px solid var(--line);font-size:11.5px;color:var(--ink);white-space:nowrap;
+}
+.copyright-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--grad);flex:0 0 auto}
+.copyright-chip b{font-weight:700}
+.copyright-chip span{color:var(--muted)}
+.themes{display:flex;align-items:center;gap:6px;margin-left:8px}
+.themes button{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.9);box-shadow:0 0 0 1px var(--line),0 2px 6px rgba(0,0,0,.06);transition:transform .14s}
+.themes button:hover{transform:scale(1.12)}
+.themes button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--violet),0 2px 8px rgba(124,58,237,.24)}
+.lock-badge{
+  display:none;align-items:center;gap:6px;font-size:11px;color:var(--violet);
+  padding:5px 10px;border-radius:999px;background:var(--lilac);border:1px solid var(--line-strong);white-space:nowrap;
+}
+.lock-badge svg{width:12px;height:12px}
+
+/* ========== 主体布局（窄屏单列优先） ========== */
+.shell{position:relative;z-index:1;display:block;padding:14px 12px 30px;max-width:1240px;margin:0 auto}
+.side{display:none}
+.main{min-width:0}
+.page-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin:6px 2px 14px}
+.page-head h2{font-size:22px;font-weight:800;letter-spacing:-.01em}
+.page-head p{color:var(--muted);font-size:12.5px}
+.view{display:none}
+.view.on{display:block}
+
+/* ========== 通用卡片 / 按钮 ========== */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+.card + .card{margin-top:12px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.card-head h3{font-size:14.5px;font-weight:700;letter-spacing:.01em;display:flex;align-items:center;gap:8px}
+.card-head h3 .ic{width:26px;height:26px;border-radius:8px;background:var(--lilac);display:grid;place-items:center;color:var(--violet)}
+.card-head h3 .ic svg{width:14px;height:14px}
+.card-head .note{color:var(--faint);font-size:11.5px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:0 15px;border-radius:var(--radius-sm);font-weight:600;font-size:13.5px;transition:filter .16s,transform .12s,box-shadow .16s,background .16s}
+.btn svg{width:15px;height:15px}
+.btn:active{transform:translateY(1px)}
+.btn-primary{color:#fff;background:var(--grad);box-shadow:0 8px 20px rgba(124,58,237,.22)}
+.btn-primary:hover{filter:brightness(1.05)}
+.btn-primary:disabled{opacity:1;background:#EFE9FA;color:#A896C4;border:1px solid var(--line);box-shadow:none}
+.btn-soft:disabled{opacity:1;background:#F5F0FC;color:#A896C4;border-color:var(--line)}
+.btn-ghost{background:var(--card);border:1px solid var(--line-strong);color:var(--ink)}
+.btn-ghost:hover{background:var(--card-soft)}
+.btn-soft{background:var(--lilac);color:var(--violet);border:1px solid var(--line-strong)}
+.btn-soft:hover{filter:brightness(.98)}
+.btn-danger{background:var(--bad-bg);color:var(--bad);border:1px solid #FAD2DC}
+.btn-sm{min-height:34px;padding:0 11px;font-size:12.5px;border-radius:var(--radius-xs)}
+.btn:disabled{opacity:.46;cursor:not-allowed;box-shadow:none;filter:none}
+.btn-block{width:100%}
+
+/* ========== 导入区 ========== */
+.drop{
+  position:relative;border:1.5px dashed var(--line-strong);border-radius:var(--radius);
+  background:var(--grad-soft);padding:26px 16px;text-align:center;cursor:pointer;
+  transition:border-color .18s, background .18s, transform .16s;
+}
+.drop:hover{border-color:var(--violet);background:var(--lilac)}
+.drop.drag{border-color:var(--violet);box-shadow:var(--ring);transform:scale(.995)}
+.drop .ic{width:52px;height:52px;margin:0 auto 10px;border-radius:16px;background:var(--card);display:grid;place-items:center;box-shadow:var(--shadow-sm);color:var(--violet)}
+.drop .ic svg{width:24px;height:24px}
+.drop b{display:block;font-size:15px;font-weight:700}
+.drop span{display:block;margin-top:4px;color:var(--muted);font-size:12px}
+.drop .acts{display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+
+.file-strip{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--card-soft);border:1px solid var(--line)}
+.file-strip .fname{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.file-strip .fname .fi{width:22px;height:22px;border-radius:7px;background:var(--lilac);display:grid;place-items:center;color:var(--violet);flex:0 0 auto}
+.file-strip .fname .fi svg{width:11px;height:11px}
+.file-strip .fmeta{color:var(--muted);font-size:11.5px;white-space:nowrap}
+.file-strip .fx{margin-left:auto}
+
+/* ========== 参数网格 ========== */
+.fields{display:grid;grid-template-columns:1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.02em;display:flex;align-items:center;gap:5px}
+.field label .k{font-size:10px;color:var(--faint);font-weight:500}
+.control{height:40px;border-radius:var(--radius-xs);border:1.5px solid var(--line);background:#fff;padding:0 11px;font-size:13.5px;transition:border-color .16s,box-shadow .16s;width:100%}
+.control:focus{outline:none;border-color:var(--violet);box-shadow:var(--ring)}
+select.control{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23786A92' stroke-width='1.8'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;background-size:15px;padding-right:30px}
+.seg{display:flex;gap:0;border:1.5px solid var(--line);border-radius:var(--radius-xs);overflow:hidden;background:#fff}
+.seg label{flex:1;position:relative;display:grid;place-items:center;min-height:40px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:background .16s,color .16s}
+.seg label + label{border-left:1px solid var(--line)}
+.seg input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.seg label:has(input:checked){background:var(--lilac);color:var(--violet)}
+.seg label:has(input:focus-visible){box-shadow:inset 0 0 0 2px rgba(124,58,237,.35)}
+.hintline{display:flex;align-items:flex-start;gap:8px;margin-top:12px;padding:9px 11px;border-radius:10px;background:var(--sky);color:var(--muted);font-size:12px;line-height:1.55;border:1px solid var(--line)}
+.hintline .hi{width:18px;height:18px;border-radius:6px;background:#fff;display:grid;place-items:center;color:var(--blue);flex:0 0 auto}
+.hintline .hi svg{width:11px;height:11px}
+
+/* ========== 校验报告 ========== */
+.report{margin-top:12px;border-radius:14px;border:1px solid var(--line);overflow:hidden;background:var(--card)}
+.report .rh{display:flex;align-items:center;gap:9px;padding:11px 13px;font-weight:700;font-size:13px;background:var(--lilac);color:#5B46B4}
+.report.pass .rh{background:var(--ok-bg);color:var(--ok)}
+.report.warn .rh{background:var(--bad-bg);color:var(--bad)}
+.report .rh svg{width:16px;height:16px}
+.report .rh .rnote{margin-left:auto;font-weight:500;font-size:11.5px;opacity:.85}
+.report .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line)}
+.report .cell{background:#fff;padding:9px 12px}
+.report .cell .v{font-size:15px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.report .cell .l{font-size:10.5px;color:var(--faint);letter-spacing:.04em;margin-top:1px}
+.report .cell.warn .v{color:var(--bad)}
+
+/* ========== 预览 ========== */
+.tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--lilac);border:1px solid var(--line)}
+.tabs button{flex:1;min-height:32px;border-radius:9px;font-size:12.5px;font-weight:650;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:#fff;color:var(--violet);box-shadow:var(--shadow-sm)}
+pre.code{
+  margin:0;background:#FCF9FF;border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:12px;max-height:340px;overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.65;color:#3B2E52;
+  white-space:pre;tab-size:2;
+}
+pre.code .cm{color:#9A86B8}
+pre.code .cmd{color:#4C1D95;font-weight:600}
+pre.code .hl{color:#B4276B;font-weight:800}
+pre.code .kw{color:#7C3AED;font-weight:600}
+pre.code .num{color:#C2410C}
+pre.code .str{color:#0F766E}
+.code-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;color:var(--faint);font-size:11px}
+
+/* ========== 键位预览 ========== */
+.kb{border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,#fff,#FBF7FF);padding:12px;overflow:hidden}
+.kb-row{position:relative;height:58px;margin-bottom:9px;display:flex;gap:4px}
+.kb-row:last-child{margin-bottom:0}
+.kb-keys{position:relative;flex:1 1 auto;display:flex;gap:3px;min-width:0}
+.kb-key{
+  position:relative;height:100%;border-radius:8px;background:#F8F4FF;border:1px solid var(--line-strong);
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:6px;
+  font-size:12px;font-weight:700;color:#4A3A6B;flex:1 1 0;min-width:0;
+}
+.kb-key .kn{font-size:9px;font-weight:600;color:var(--faint);margin-top:2px;letter-spacing:0}
+.kb-key.b{
+  position:absolute;width:9.4%;height:66%;top:0;border-radius:0 0 7px 7px;background:#3B2E52;border-color:#2C2140;
+  color:#EADFF9;box-shadow:0 2px 6px rgba(40,20,70,.22);z-index:2;justify-content:center;padding:4px 0 0;
+}
+.kb-key.b .ck{font-size:8px;font-weight:600;line-height:1.25;text-align:center;font-variant-numeric:tabular-nums}
+.kb-key.hl{background:var(--lilac);border-color:var(--violet);color:var(--violet);box-shadow:inset 0 0 0 1px var(--violet)}
+.kb-clef{width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--faint);writing-mode:vertical-rl;letter-spacing:.16em}
+
+/* ========== 批量 ========== */
+.batch-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.batch-sub{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.batch-sub input{max-width:340px}
+.queue{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden;max-height:300px;overflow-y:auto;background:#fff}
+.qi{display:flex;align-items:center;gap:9px;padding:9px 11px;border-bottom:1px solid var(--line);font-size:12.5px}
+.qi:last-child{border-bottom:0}
+.qi .qn{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qi .st{flex:0 0 auto;font-size:10.5px;padding:2px 7px;border-radius:999px;background:var(--lilac);color:var(--violet);white-space:nowrap}
+.qi.ok .st{background:var(--ok-bg);color:var(--ok)}
+.qi.err .st{background:var(--bad-bg);color:var(--bad)}
+.qi.doing .st{background:var(--sky);color:var(--blue)}
+.qi .x{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:var(--faint);flex:0 0 auto}
+.qi .x:hover{background:var(--bad-bg);color:var(--bad)}
+.qi-no{width:18px;flex:0 0 18px;text-align:right;font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.qi-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--ink)}
+.qi-sub{flex:0 1 30%;max-width:30%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;color:var(--faint)}
+.qi-state{flex:0 0 auto;font-size:10.5px;padding:2px 8px;border-radius:999px;background:var(--lilac);color:var(--violet);white-space:nowrap}
+.qi-state.ok{background:var(--ok-bg);color:var(--ok)}
+.qi-state.run{background:var(--sky);color:var(--blue)}
+.qi-state.err{background:var(--bad-bg);color:var(--bad)}
+.progress{height:8px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:10px;display:none}
+.progress.on{display:block}
+.progress i{display:block;height:100%;width:0;background:var(--grad);transition:width .2s}
+.result{margin-top:10px;font-size:12.5px;color:var(--muted);display:none}
+.result.on{display:block}
+.result.bad b{color:var(--bad)}
+.result .errs{margin-top:6px;font-size:11.5px;color:var(--bad);line-height:1.7}
+
+/* ========== 坐标 ========== */
+.coord-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.ci{display:grid;grid-template-columns:1fr 78px 78px;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:11px;background:var(--card-soft)}
+.ci .lab{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:7px}
+.ci .lab .rowtag{font-size:10px;font-weight:600;color:var(--faint);background:var(--lilac);padding:1px 6px;border-radius:5px}
+.ci input{height:34px;border-radius:9px;border:1.5px solid var(--line);background:#fff;padding:0 8px;font-size:13px;font-family:var(--mono);text-align:center;width:100%}
+.ci input:focus{outline:none;border-color:var(--violet);box-shadow:var(--ring)}
+.ci input.bad{border-color:var(--bad);background:var(--bad-bg)}
+
+/* ========== 帮助 ========== */
+.steps{display:grid;gap:10px}
+.step{display:grid;grid-template-columns:30px 1fr;gap:11px;align-items:start}
+.step .no{width:30px;height:30px;border-radius:9px;background:var(--grad);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;box-shadow:0 4px 10px rgba(124,58,237,.22)}
+.step h4{font-size:13.5px;font-weight:700}
+.step p{color:var(--muted);font-size:12.5px;margin-top:2px}
+.rules{display:grid;gap:8px}
+.rule{display:flex;gap:9px;font-size:12.5px;color:var(--muted);line-height:1.6}
+.rule .ri{width:18px;height:18px;border-radius:6px;background:var(--ok-bg);color:var(--ok);display:grid;place-items:center;flex:0 0 auto;margin-top:2px}
+.rule .ri svg{width:11px;height:11px}
+.about-box{border-radius:14px;background:var(--grad-soft);border:1px solid var(--line);padding:14px}
+.about-box h4{font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px}
+.about-box .rows{margin-top:10px;display:grid;gap:6px;font-size:12.5px}
+.about-box .rows .r{display:flex;gap:10px}
+.about-box .rows .r span:first-child{color:var(--faint);width:76px;flex:0 0 auto}
+
+/* ========== 页脚 ========== */
+.foot{margin-top:20px;padding:14px 16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.72);text-align:center;color:var(--faint);font-size:11.5px;line-height:1.8}
+.foot b{color:var(--ink);font-weight:700}
+.foot .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800;letter-spacing:.06em}
+
+/* ========== 提示条 ========== */
+.toast{
+  position:fixed;left:50%;bottom:22px;transform:translate(-50%,16px);z-index:60;
+  padding:11px 16px;border-radius:12px;background:rgba(35,26,53,.94);color:#fff;font-size:13px;
+  box-shadow:0 14px 34px rgba(40,20,70,.28);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:min(92vw,520px);text-align:center;
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ========== 桌面布局 ========== */
+@media (min-width:900px){
+  .topbar{padding:12px 26px;gap:16px}
+  .topbar .logo .tag{display:block}
+  .lock-badge{display:inline-flex}
+  .copyright-chip{font-size:12px;padding:7px 13px}
+  .shell{display:grid;grid-template-columns:196px minmax(0,1fr);gap:18px;padding:20px 26px 40px}
+  .side{display:block;position:sticky;top:78px;align-self:start}
+  .nav{display:grid;gap:4px;padding:8px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.8);box-shadow:var(--shadow-sm);backdrop-filter:blur(10px)}
+  .nav button{display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:11px;font-size:13px;font-weight:600;color:var(--muted);text-align:left}
+  .nav button svg{width:16px;height:16px;flex:0 0 auto;opacity:.8}
+  .nav button:hover{background:var(--card-soft);color:var(--ink)}
+  .nav button[aria-current="page"]{background:var(--lilac);color:var(--violet)}
+  .nav .sep{height:1px;background:var(--line);margin:6px 4px}
+  .nav .tiny{font-size:11px;color:var(--faint);padding:8px 11px;line-height:1.6}
+  .fields{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .coord-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .report .grid{grid-template-columns:repeat(4,1fr)}
+  .mobile-nav{display:none}
+  .page-head{margin:2px 2px 16px}
+  .page-head h2{font-size:26px}
+  .page-head p{font-size:13.5px}
+}
+@media (min-width:1180px){
+  .coord-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:899px){
+  .mobile-nav{display:flex;gap:4px;overflow-x:auto;padding:4px;border-radius:12px;background:rgba(255,255,255,.8);border:1px solid var(--line);margin-bottom:12px;position:sticky;top:56px;z-index:15;backdrop-filter:blur(12px)}
+  .mobile-nav button{flex:0 0 auto;padding:8px 12px;border-radius:9px;font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap}
+  .mobile-nav button[aria-current="page"]{background:var(--lilac);color:var(--violet)}
+  .copyright-chip span{display:none}
+  .copyright-chip::before{content:'©';font-weight:800;opacity:.75;margin-right:2px}
+  .topbar{gap:8px}
+  .themes button{width:20px;height:20px}
+  .page-head h2{font-size:23px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+<div class="aura" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i></div>
+
+<!-- ===== 许可门 ===== -->
+<section id="gate" class="gate hidden">
+  <div class="gate-card" id="gateCard">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l12-3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg>
+    </div>
+    <h1>MIDQ</h1>
+    <p class="sub">MIDI 精确转换 · 按键精灵 Q 脚本</p>
+
+    <div class="gate-form">
+      <div class="gate-label">使用许可密钥 / 快速密码</div>
+      <input id="licInput" class="gate-input" type="text" autocomplete="off" spellcheck="false"
+             placeholder="CMQN-XXXXX-XXXX-XXXX-XXXX  或  AAD115" maxlength="40" aria-label="使用许可密钥">
+      <button id="licBtn" class="gate-btn" type="button">解锁并进入</button>
+      <div id="licErr" class="gate-err" role="alert"></div>
+    </div>
+
+    <div class="gate-hint">
+      <b>许可密钥</b>：CMQN 系列整串输入，可省略连字符<br>
+      <b>快速密码</b>：6 位字母数字组合<br>
+      <b>安全</b>：核心转换逻辑以密文分发，密钥仅在本机校验，所有 MIDI 数据不上传
+    </div>
+    <div class="gate-copy">
+      <span>作者 <b>珂眠</b></span><span class="sep">·</span><span>联系 QQ <b>3787165824</b></span><br>
+      <span class="muted">版权所有 · 未经许可严禁转载 · 本软件归开发者所有</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 应用 ===== -->
+<div id="app" class="hidden">
+  <header class="topbar">
+    <div class="logo">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l12-3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg></div>
+      <div>
+        <div class="name">MIDQ</div>
+        <div class="tag">MIDI → 按键精灵 Q</div>
+      </div>
+    </div>
+    <div class="lock-badge" title="已解锁 · 本次会话有效">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/></svg>
+      已解锁
+    </div>
+    <div class="copyright-chip">
+      <i class="dot"></i>
+      <span>作者</span><b>珂眠</b>
+      <span>· 联系 QQ</span><b>3787165824</b>
+    </div>
+    <div class="themes" id="themes" aria-label="主题切换">
+      <button data-theme="violet" aria-pressed="true" title="紫霞" style="background:linear-gradient(120deg,#7C3AED,#4F46E5,#EC4899)"></button>
+      <button data-theme="blue" aria-pressed="false" title="蓝海" style="background:linear-gradient(120deg,#2563EB,#4F46E5,#22D3EE)"></button>
+      <button data-theme="sakura" aria-pressed="false" title="樱粉" style="background:linear-gradient(120deg,#EC4899,#F43F5E,#A78BFA)"></button>
+      <button data-theme="lilac" aria-pressed="false" title="浅紫" style="background:linear-gradient(120deg,#8B5CF6,#6366F1,#C084FC)"></button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="side">
+      <nav class="nav" id="navDesktop" aria-label="主导航"></nav>
+    </aside>
+    <main class="main">
+      <div class="mobile-nav" id="navMobile" aria-label="主导航"></div>
+
+      <!-- ===== 视图：单曲转换 ===== -->
+      <section class="view on" id="view-convert">
+        <div class="page-head">
+          <h2>单曲转换</h2>
+          <p>时间与拍子逐组对齐原曲，输出 Q 文件名与描述均为曲名</p>
+        </div>
+
+        <div class="card">
+          <div class="drop" id="drop">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></div>
+            <b>把 MIDI 拖到这里</b>
+            <span>支持 .mid / .midi，多文件自动进入批量队列</span>
+            <div class="acts">
+              <button class="btn btn-primary btn-sm" id="btnPickFile" type="button">选择 MIDI 文件</button>
+              <button class="btn btn-ghost btn-sm" id="btnDemo" type="button">载入示例曲</button>
+            </div>
+          </div>
+          <input type="file" id="fileInput" accept=".mid,.midi,audio/midi,audio/x-midi" class="hidden">
+          <div class="file-strip hidden" id="fileStrip">
+            <div class="fname"><i class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V6l12-3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg></i><span id="fileName">—</span></div>
+            <div class="fmeta" id="fileMeta">—</div>
+            <button class="btn btn-ghost btn-sm fx" id="btnClearFile" type="button">移除</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg></span>转换参数</h3>
+            <span class="note" id="speedNote">速度 1.00× · 原速锁定</span>
+          </div>
+          <div class="fields">
+            <div class="field">
+              <label for="opt-base">基础音 <span class="k">MIDI 60 = 中音 do</span></label>
+              <input class="control" id="opt-base" type="number" min="0" max="127" step="1" value="60">
+            </div>
+            <div class="field">
+              <label for="opt-transpose">移调 <span class="k">半音</span></label>
+              <input class="control" id="opt-transpose" type="number" min="-24" max="24" step="1" value="0">
+            </div>
+            <div class="field">
+              <label for="opt-speed">速度倍率 <span class="k">1 = 原速</span></label>
+              <input class="control" id="opt-speed" type="number" min="0.25" max="4" step="0.01" value="1">
+            </div>
+            <div class="field">
+              <label for="opt-channel">音轨通道</label>
+              <select class="control" id="opt-channel">
+                <option value="all" selected>全部通道</option>
+                <option value="nodrums">排除鼓组（10 通道）</option>
+                <option value="0">通道 1</option><option value="1">通道 2</option><option value="2">通道 3</option>
+                <option value="3">通道 4</option><option value="4">通道 5</option><option value="5">通道 6</option>
+                <option value="6">通道 7</option><option value="7">通道 8</option><option value="8">通道 9</option>
+                <option value="10">通道 11</option><option value="11">通道 12</option><option value="12">通道 13</option>
+                <option value="13">通道 14</option><option value="14">通道 15</option><option value="15">通道 16</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="opt-delaymode">延时模式</label>
+              <select class="control" id="opt-delaymode">
+                <option value="gap" selected>按组间隔（推荐 · 最贴近原曲）</option>
+                <option value="dur">按音符时长</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="opt-quantize">时间量化 <span class="k">ms · 0 = 不量化</span></label>
+              <input class="control" id="opt-quantize" type="number" min="0" max="200" step="1" value="0">
+            </div>
+            <div class="field">
+              <label for="opt-mindelay">最小间隔 <span class="k">ms</span></label>
+              <input class="control" id="opt-mindelay" type="number" min="0" max="200" step="1" value="0">
+            </div>
+            <div class="field">
+              <label for="opt-initdelay">起始延时 <span class="k">ms</span></label>
+              <input class="control" id="opt-initdelay" type="number" min="0" max="5000" step="10" value="100">
+            </div>
+            <div class="field">
+              <label>演奏方式</label>
+              <div class="seg" role="radiogroup" aria-label="演奏方式">
+                <label><input type="radio" name="mode" value="group" checked>分组同按</label>
+                <label><input type="radio" name="mode" value="sustain">逐音按住</label>
+              </div>
+            </div>
+            <div class="field">
+              <label>鼠标键</label>
+              <div class="seg" role="radiogroup" aria-label="鼠标键">
+                <label><input type="radio" name="btn" value="Left">左键</label>
+                <label><input type="radio" name="btn" value="Right" checked>右键</label>
+              </div>
+            </div>
+            <div class="field">
+              <label>脚本注释</label>
+              <div class="seg" role="radiogroup" aria-label="脚本注释">
+                <label><input type="radio" name="cmt" value="1" checked>包含音名</label>
+                <label><input type="radio" name="cmt" value="0">不注释</label>
+              </div>
+            </div>
+          </div>
+          <div class="hintline">
+            <span class="hi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg></span>
+            <span>速度倍率保持 <b>1.00×</b> 时严格按原曲拍速换算；每组 Delay 由 tick→毫秒精确推导，变速曲（tempo 变化）逐段累计，不使用平均拍速。</span>
+          </div>
+        </div>
+
+        <div class="card" id="resultCard">
+          <div class="card-head">
+            <h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="m9 11 3 3L22 4"/></svg></span>转换结果与严格校验</h3>
+            <span class="note" id="resultNote">等待导入 MIDI</span>
+          </div>
+
+          <div class="report" id="report">
+            <div class="rh">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+              <span id="reportTitle">尚未转换</span>
+              <span class="rnote" id="reportNote">—</span>
+            </div>
+            <div class="grid">
+              <div class="cell"><div class="v" id="stNotes">—</div><div class="l">音符数</div></div>
+              <div class="cell"><div class="v" id="stGroups">—</div><div class="l">演奏组</div></div>
+              <div class="cell"><div class="v" id="stLines">—</div><div class="l">脚本行</div></div>
+              <div class="cell"><div class="v" id="stDur">—</div><div class="l">总时长 / 原曲</div></div>
+              <div class="cell"><div class="v" id="stDrift">—</div><div class="l">最大时间偏差</div></div>
+              <div class="cell"><div class="v" id="stEnd">—</div><div class="l">结束偏差</div></div>
+              <div class="cell"><div class="v" id="stTempo">—</div><div class="l">拍速段 / TPQ</div></div>
+              <div class="cell"><div class="v" id="stRange">—</div><div class="l">音域（超范围音）</div></div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="tabs" role="tablist" aria-label="结果视图">
+              <button role="tab" aria-selected="true" data-tab="code" type="button">Q 脚本预览</button>
+              <button role="tab" aria-selected="false" data-tab="keys" type="button">键盘键位</button>
+            </div>
+            <div id="paneCode" style="margin-top:10px">
+              <pre class="code" id="preview"><span class="cm">导入 MIDI 后在此显示生成的 Q 脚本</span></pre>
+              <div class="code-foot">
+                <span id="codeInfo">曲名将用于文件名与脚本描述</span>
+                <button class="btn btn-ghost btn-sm" id="btnCopy" type="button">复制脚本</button>
+              </div>
+            </div>
+            <div id="paneKeys" class="hidden" style="margin-top:10px">
+              <div class="kb" id="kbLayout"></div>
+              <div class="code-foot"><span>黑键为鼠标坐标点击，白键为键盘按键</span></div>
+            </div>
+          </div>
+
+          <div class="batch-row" style="margin-top:14px">
+            <button class="btn btn-primary" id="btnConfirmDownload" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              确认无误 · 下载 Q 文件
+            </button>
+            <button class="btn btn-soft" id="btnConfirmZip" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M21 8v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8"/><path d="M3 8h18l-3-5H6L3 8z"/><path d="M12 8v14"/></svg>
+              打包 ZIP 下载
+            </button>
+            <span class="note" id="outNote">输出：曲名.Q · 描述=曲名</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 视图：批量转换 ===== -->
+      <section class="view" id="view-batch">
+        <div class="page-head">
+          <h2>批量转换</h2>
+          <p>整文件夹导入，按层级输出；确认后打包 ZIP 下载</p>
+        </div>
+
+        <div class="card">
+          <div class="batch-row">
+            <button class="btn btn-ghost" id="btnBatchAdd" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14m-7-7h14"/></svg>
+              添加 MIDI 文件
+            </button>
+            <input type="file" id="batchInput" accept=".mid,.midi,audio/midi,audio/x-midi" multiple class="hidden">
+            <button class="btn btn-ghost" id="btnBatchFolder" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+              导入文件夹（批量）
+            </button>
+            <input type="file" id="batchFolderInput" webkitdirectory multiple class="hidden">
+            <button class="btn btn-ghost" id="btnBatchClear" type="button">清空队列</button>
+          </div>
+          <div class="batch-sub">
+            <div class="field" style="max-width:420px">
+              <label for="batchSubdir">子文件夹名（可选）</label>
+              <input class="control" id="batchSubdir" type="text" placeholder="留空则直接写入所选文件夹 / ZIP 根目录">
+            </div>
+            <span class="note" style="font-size:11.5px;color:var(--faint)">导入文件夹时自动保留其内部层级；输出文件名为每首曲名，描述同为曲名</span>
+          </div>
+
+          <div class="queue" id="batchQueue"><div class="qi" style="color:var(--faint)">队列为空</div></div>
+          <div class="progress" id="batchProgress"><i></i></div>
+          <div class="result" id="batchResult"></div>
+
+          <div class="batch-row" style="margin-top:14px">
+            <button class="btn btn-primary" id="btnBatchGo" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m5 3 14 9-14 9V3z"/></svg>
+              转换到指定文件夹
+            </button>
+            <button class="btn btn-soft" id="btnBatchZip" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M21 8v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8"/><path d="M3 8h18l-3-5H6L3 8z"/><path d="M12 8v14"/></svg>
+              批量转换并下载 ZIP
+            </button>
+          </div>
+          <div class="hintline">
+            <span class="hi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg></span>
+            <span>ZIP 模式无需选择文件夹；每首曲目独立精确转换，单首失败不会中断其余曲目。</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span>批量输出规则</h3>
+            <span class="note">保留层级 · 逐首精确</span>
+          </div>
+          <div class="rules">
+            <div class="rule"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></span><span>导入文件夹时保留其内部子目录层级，输出为「层级/曲名.Q」；设置子文件夹名后整体再包裹一层。</span></div>
+            <div class="rule"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></span><span>每首曲目按自身 tempo 事件独立换算，速度倍率保持 1.00× 时严格等于原曲。</span></div>
+            <div class="rule"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></span><span>输出文件名与脚本 Description 均为曲名（去掉 .mid 后缀），在按键精灵列表里按曲名即可找到。</span></div>
+            <div class="rule"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></span><span>单首解析或转换失败会在结果区标出原因，其余曲目继续处理，ZIP 只包含成功条目。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 视图：坐标设置 ===== -->
+      <section class="view" id="view-coords">
+        <div class="page-head">
+          <h2>黑键坐标</h2>
+          <p>仅鼠标坐标会被保存，其余设置每次打开恢复默认</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg></span>鼠标点击坐标</h3>
+            <button class="btn btn-ghost btn-sm" id="btnResetCoords" type="button">恢复默认</button>
+          </div>
+          <div class="coord-grid" id="coordGrid"></div>
+          <div class="hintline">
+            <span class="hi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg></span>
+            <span>只能输入数字（0–10000），不支持字母与其他符号。坐标修改实时保存在本机；下次打开只恢复这里的坐标，其他设置与曲目一律恢复初始状态。</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15h.01M12 15h.01M17 15h.01"/></svg></span>键位预览</h3></div>
+          <div class="kb" id="kbLayout2"></div>
+        </div>
+      </section>
+
+      <!-- ===== 视图：使用说明 ===== -->
+      <section class="view" id="view-help">
+        <div class="page-head">
+          <h2>使用说明</h2>
+          <p>转换规范、下载流程与版权信息</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>三步生成可演奏脚本</h3></div>
+          <div class="steps">
+            <div class="step"><div class="no">1</div><div><h4>导入 MIDI</h4><p>拖入或选择 .mid/.midi；需要多首时进入批量队列。可先调整黑键坐标以匹配你的游戏窗口。</p></div></div>
+            <div class="step"><div class="no">2</div><div><h4>检查严格校验</h4><p>查看音符、组数、时长与最大时间偏差；偏差 0ms 表示与原曲逐组一致。</p></div></div>
+            <div class="step"><div class="no">3</div><div><h4>确认并下载</h4><p>确认无误后下载 .Q 或打包 ZIP。文件名与脚本描述都是曲名，在按键精灵里可直接找到。</p></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>转换规范</h3></div>
+          <div class="rules">
+            <div class="rule"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></span><span>拍速按文件内 tempo 事件逐段换算，变速曲不取平均值，不做四舍五入漂移。</span></div>
+            <div class="rule"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></span><span>分组模式每组 Delay = 下一组起始时刻 − 本组起始时刻，逐组累加严格对齐。</span></div>
+            <div class="rule"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></span><span>超出 36 键范围的音自动用左右方向键升降八度，组内先弹本组音再切换，不漏音不错音。</span></div>
+            <div class="rule"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></span><span>同一时刻的音符合并为和弦组；同键重叠按下先闭合旧音再开新音，保证长音与踏板音不丢。</span></div>
+            <div class="rule"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></span><span>输出统一 CRLF 换行与标准 [General]/[Script] 头，按键精灵 2014 可直接识别。</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="about-box">
+            <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>版权与技术支持</h4>
+            <div class="rows">
+              <div class="r"><span>作者</span><b>珂眠</b></div>
+              <div class="r"><span>联系 QQ</span><b>3787165824</b></div>
+              <div class="r"><span>版本</span><span>MIDQ 1.0 正式版</span></div>
+              <div class="r"><span>声明</span><span>版权所有 · 未经许可严禁转载 · 本软件归开发者所有</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <span class="grad">MIDQ</span> · 作者 <b>珂眠</b> · 联系 QQ <b>3787165824</b><br>
+        版权所有 · 未经许可严禁转载 · 本软件归开发者所有
+      </footer>
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- 核心载荷：发布版为 AES-GCM 密文，本地源码版为明文 -->
+<script id="corePayload" type="text/plain">/* 核心以密文分发，需授权口令解封 */</script>
+
+<script>
+/* ============================================================
+   MIDQ · 引导层
+   ============================================================ */
+var BOOT_MODE = 'enc';                 // 'plain' | 'enc'
+var ENVELOPE = {"iter":150000,"salt":"dAEqAuwIqFt5CKUQVmfC/A==","iv":"/E5I+hAaKgOb+Ipd","ct":"opJmCUcnPE9so67V2LRs0jVqePb+5p4QIUGQVIBHln0QEHl74LZPu3+4VJaHxWkmzwrZJoiH32Tm0MKmSoIrABkIFQiqpKtrGBzilaj8GhZa9LyuSIAhIXmeNJQwjCq6Fmq9MfxM4dKXo2sOVERcOL1goZYsSo0cYtm027IWXBVob8fpIhpr3TrBzS6Fe5+g/e02rQW6zND4zLZg+oLMER57GVx+bbCJ1bC043vv47cm8o2cMWLg7WeF8SKFEioC5p94OFqHUIbGdGy4Nn3evJ0542Mb7bcvzdCLLcErMLQvJMgdZfsIiWzkKq/TloaE1Q8TyFI6/lodt5Fr5scCFo58IWLDnNpgHpllwtMkOs01lpQOJUBhn4VFzQj26t1LpIoUVWHbKXKj7xqZ7J9sphzmKy1EItWZpg3VAKlK+j+dFIqWwHaxAVYZYH2obA4Pvytfl2pDsmcLj+DUtbq+0vsbpIgAlUg11cyeMbWCl69vIEJ6rQvVHlMkdTw3LbGrrbfzqph+fmdmjvmJSH9JmqUieUoYwjT/O1bdhGgWKiJQjBxuBFYgyRt23xxZMeGw4WdeHOtH9peiF7SMfKgOCEnP9coHj3no01lSie9RO5wTiPpsXi8FV1fYoOZJ0SFB9Bplz8zaRvEWcmUJwgviEm2TNCdf95ytVCaYZKmTT8QKB8+a8sEh/CBK1fOPc310aOi9yIk/E/Sl8AzUMx5qo2B2hMNjv/CV6kTGrIqy+Xm31ZuM7f4GGpbCaFlRdwGWzSRlVQQ+LD3A0mbbvc+m/4qJKnpu8T7NQ9EzXVHy/FEIj79cHsxWmreBzq3USRVNcBWVmfoq5J+C2Is576HDesfmZLW0Qac5JdnzgsLYXSCOht1qwl8R2F9VLuYdYO+kJQU/5ZA4261hwIOJakUv79EXFF2NG2ieKUmlISqXHwGVnslqBNGeZKIWMs6WhVj9R6rZttJ8kfILDowWSitrCPfsSUT+eYuj9w43fue1PSODdstCnvfRQ979WDNNips275NxC1s7uo5u4P1O7xo4b1EStyNtUBlyfBx4IuEve1qQToB8PavUji5sd4HCNJUXZiTmKuF5l/z8kZWd+aeNdbXCEo5zxniOplQfi27fe22tue1B/AKVPZtjMiD9pOSwZCnHlhP3HJBvBvg4vrBIcM4FFoNmteWdu/7p3Mo9Gjdwodo4NeQj2c0EBEbuZyQFRFfnO3uuhSzlBogizuBN1Unt/fi1ha/f6jEHwkZFs7Dwt0Fh8YXwCZmg6cf1mkJqLD5DxS3xV+eO24MnD+lrRX1OgCdQp/xE2cT9ZUOYzOFZ6s6DgENP1i7spJXlIfUEp3QqcpJJg5spHHJZ00opLwOH13Tv1HH0502/Uv8KwGeAylHqZ1kXX2sQAR6WdeSpVcClx+7b6fOuFizWaL/3dUFof+trFmAxzfraZzxYiLrsbHvfdl16uiCu3LeBp2v6JT9+N61rDTbg6gLhPVK9pgX186ggnX3oyDOLMLeaYJRPT/GTANQQsAn+duRiwYLRqFFipuoHKpwMkU7kccsygjQGm8DWTwwjz3AN4PHjkvHNoquP9Lr+YMGiZbsfGS9bCMLBNO+g1Fyme3euQlggRr6WUvOzOEC0j1eau9kvN2OWEEaXti9A2BcQrXHF6ZLwzWOD2Pc3Nt6wegn2AUIN/JTlynjXrDAKQKv9GsZ8NBTuKyZ3h7sPmJMnSCoFL8SNtA70wfYaXBI3pIpvO48HkqEKlZWI6IK0Udak4pYu85heyOAagZIUrcIhm4VHMube4PJ/aGFuvp+HSGLg/1+dvKC0r5uDoSZw+nf7PLPNsxbo7K+sZZB7fs5tUqaavsCHBJwFWWQCuVCmCzuseV+G9ts9f5yNsoMBQ/XaA2wh/p3oPWzPMhI/fFtel3x7NAJqWqvvUkXLKZIv1OHEjt5IrdjBS3TnSpLE4qYe1UWNHNr/C6v5nND36KibusyC/uNw1WoKVeQcsKmQD/a1m8+EX/22Io2U6NaXGCKZyd1w8xIEWupMZNxMm0R+/FTdS+BD3QH3AflEBctCwAQ/biYAkfyurpHob/bHuhEH8XW7C/SxbYSC2tSCi9dLFqL3CZ4xtSal+jYPhgTDvdrP889R1o96/3fN52nwKYFIezamJXKbPaGOJHr982ASKivzArn8qlCyKbn8HT4Kp/wjH3OHHsa1BWNDOEA6mhnzKRrkn6obAxnqjSdrohHfx4iwH4ZRjGpqzggFF1a9oIOKDASo79oP5xTN72lrP8SEjtpoGtYs4KLqSFcp0LzaqmAWuczCG8ir3/1lfKIYfUcAgi8lL99wjERK0VqaJhcmYgr3SEUeSViD33b9RE3MhXperORua3qc6kUx6lo38KFpygBrtINSsqmWEHv2QUPREW976I6+Wvv0O0NAe/cjMR5kwcq0xi9sR44NyImscfRC4wBOWF5nQbCas1u/udeEY/RjykC21B5fwDnjE3vW3YLOk0o/tr3KcSPh2JvT6FYF07tG+Fe+aEwwiuVLUb8PioGh9KNu1gul3WTWesUIYrnckQGXr0wU+T/iH/Qn3k5yvGhbZ6qOIgc2yYbq3mcWh/Ijucr1BQ5pct5QqYnIqn2bAhIC/ixyIpOoJ6PgfWkjSYyyOKVNx7ndkh2VJhcrtwDXrHhcLnz+nY7ObsIzwvN9vNdJEczpYcYLALlYlc8HOAyjjOC97qD0nqXSrEn9Oh4qRlPwg+TlT20afFM2Lt3ifMrOT+bKJq7f0jAfWNNweqYjRZNgkY+NY8ouWzRywZPmLPI7NeVNdbb5OHzN+fFC13bUDWWpK/tIy0gEsaPpS+RbEybgscLwJOUbDBKIk6KyVNEc3VGxm3OAjhlS1ZnAPQlsV/uzPJGY1foS7g2rhkT22HP6LvfBqN3ujnL0Rp/pmxftL3JUuTe77j/ijcGNbC2BRDTj6BERfRoOXgWbF24wTUNEv+gkUL0WHyB4aPytRPMGSnYQ54pGMHAf2UYhwZslDhQe8ItlT04zko2hgy6+XjFaaBqplLeyVOTQxgjylzbTCThqWD9kvL0uPaF2Ny0THOdf4oHNPWHoxMh2bFMaVxVngSzagRrzNeC/PDKpalm+QfVrWnD99mNvmsOpIgGTC+++soJrxpdN0N0KJW7kuwHuxEBeRtybJ9pOHFElNXxCoED9wfoZiPWGBbuwyhOlSKTfvzYK6dHMfa76aFGlkzN/4cYkyOJIHoClbGmc0VWas11FprY591xJz94OvmjlvlVh2e3egrXNQsQyds4ioNAAoaM2vnpfTwgFc4JAWiSUODjQEdJ5FCIclN4l4MxA1th+2+pmlM6h+oCcnxMK38qYEDaT1RbkidSeMq0q7e5qNyOPC+fe5Ebj9ryABJKqbZRXm/iO3+4CHLC5j1MyxxHjGTn8Io6Pp2/6dJIu7Hy12AHlu1NFRGgQcPArwDBKIyGSDVv0jVqpway3JapyCTDJFcaPakZcISne24UAruxtpOlHQLO6YOQqlNMawAH4Ld68mZP6cozQhYhbdB0UzBFVb6ntOrhYICfVUCOTqplQTx8AYezjnyzWlYwI2QS9ThIDbwm/jJ3IhwyD/fH2kZo12I7+h3m4qfa9ACZTFt2ElZUwSR032AuimZ/O08ROD8ieM+2QX5pb2rQevjSnMQxy4OWVGo3H87YEljZJaPbrWnThupuC/xQT/pBUSIcpMssIy9QGjcMwdrJITwIS6yU0zEWnybRITWZX3Z6vNkUC4a9FEtceL/LZwG3WaFJRBq7KZ/aRUXxAAKBJQWHLoNs2YBm8hAZI85TdzcKpLOs0m0sjrbsi2Au4hX11RN8DKUPa7v5fOO9DkcVIAwWRBgTVdNQU7Wia9yjMjWGSRMFgMaPnuioXXNI3b3S65DQ46Khimlwb0ACMSB83m6yVvrTLnVr2655To43FRQUhkb6GnCbHeOj+0P2TdVW+4t5bahumspPxQ2h7fV933lRXj1xmalyj/kLFn8i28P0ZS3TY2SpkXMlxQR8LZFCQQqAPcAKV+4loA8gZpXQNSDtxKMMY1pfGn/UgiSREi6UYngzo0oXe8Xkdi94kJyZ7ddyUNlP88abfQl9xHYc6oT6CxIQsCjcCQK/N1cLMjZ1VwVr6ak5Y/RyoZVHREob3LMwHA3x5lsA4n/SuCTVwfukR9elXAr/wtqXHN+nvOrH3QDvJNxmmnv86EvZes/ogf6MLaSDge4Kq+YgpKvwYMAc/KWGINzwFGp8dZXnPnuPZdSfzS5snaEiXt5M6LDvozJVSz/Hn5BrS32OqcYWdv5TV9mGPf8KCMSkoMtfsaK0uGpD204FLBAQcjUGB+3IInRp5SnVaF1NkKliajrpZ1T4/v/LDmgv1hiqNf/OTlVEsOOH6KrrHsYRj1dFtf/hqZ+zBh0e7FBYogI2Rjez5Sg9SmrnibiBloxu1fA8c0ugqmT0xhY2f/nq5WL0D2WDvFf8f9f3iazDxpzDy8aEooY0iO2IYvWH4Ml7CMpfI8PFPNPAPl1VwG57gE72J15TU6Tb4Caiwm1T8jZ6rozX3jZDTShiTG6yMqjZ3tkvnCs7xYSqlioCKftCGojTtJwEjRHSeqdTMWxw/YQn0YSwwvnFv7wNpkInLLncNLlrx+M4BCM5A/Ze/uQPwtvwYt7lDLUmYYl1eQaTBQwP66hHZHMwQ9jWh3BSBSrowzcnRP1klI5XFhibMKn5y07ZI1QlDkZ2E9idXbesfgXu/YJGPwFQ8K0uMBi8/TsCDY0rv3b7cAmvE/vJIX18fp1c6IaQQjy318tp/s1RQCk0gDyR2rw7sB8Sp2g8cL8fmcNzpvj3NrjyHcHydklTi9QHPWzTrGlp4GSecBakg1jvHhlxz1CyLGpUXox41YeYZVQ6J0oIJAV1Dbz8B95OoCqnNHoHvlmoIZ+Mb9o5XBqcxOAlkWMFLpUkGKMiyiNQ8RnIQbZcjFrgCdcBreuxgIRcNqb93xBvkjWP5t2f/YYt0qKqmyuNCRSZx4zwlpBrbZYETk8Z6w7TIbCx1sM6sDzCIg84TFefqpxfpvgz4jVVCnXhgpOtWprvLB6uiXTfOo3Q5TFNwstt+2aoDZkHf43BhIs/wNe+0NvI0JivSdY2fLREGx1U4HJlfbEjy9ovFWjxjYa8mlIYXm0rGn8Zx6OnmUFpxIaS8pr7V8lFPLhiYpV9CHfOliGpzZsyyVyCpGEk7YoPick6kq4QyEwt8yFyJ5JEkjyMxTORltzjdMYWUVq6n2GVquAXKqR4JFQUjsj5/RQOuy5K/JYQ8fjh75PyrkGGAd+CAc/RpvmTsxYD12PcdllpKmUeLtXK0KfOrBmGuaM+tzD1PH8/BYvS4z5t3J43ML0ziPKHG6C3Dxo0EY3pLT20e+D6E7Ua2qTdg8qf9Xs6w/KoXKsQIJ7EcWpVyZCMIo9SANSy5Hmnv53Dza5YqqRxEWP7qBPIEnpQ1xRlTDKbAN1K7fEx5/LHMdgDnuHXr1Ji7qQ0Afiq9DrxE2zhXFvDpjse/ZD7//gJ/0wX+/3fHdq0ETtdiJyZNzmdWIAnv12UPZ301bxM5Fwk0y9WSCa6BWNE66g1NbhL0ecBxz/qm4QoCIniI7mHPUqQS8gnFfArLg+PrvcuYwOSnT31huDiMi99gmN2CPI55T8TzTVzvYtqVEQMY5NNh9sHsD3EtoXY9KNtZdXtB8hKvq34vkZxWacOCNolRbh11TbymNHLP5neYK76NH/pTUrwvvY0PketfDTLJ5AsZIpaCuXr+y8HMssR+OQWzzZtBCqdbj2wYHp1QN05mRX3dPuSbWaxZAJCKX+3QKTlRbeVvOdg2isavTqrKxITLH6VVTvcorrEvppUzsG768jkAG/hl4mDn30cy2Auumezy7GDQ23XmowrlRua1nGCv08E7IJ/5O4GF9A4nL7L2+78diSot9OBw1CXZ3Hgz94LiW9nMviWsFAibZE1rTuncKLaaf/J+5eXoQlx6YCfsRQarAV36B6ihtvIPDFWZ01/KQSlTJ3xoh4cZbxuf34CsnhFfMtnnHnXQbCwZArOXFsQOSr4r28mp3syUw84L6UgRwP3zjBa4LuRRjoWSmPyME5PBRQUiJ33weSe+i2MFbj1IBr55J96ERjHwUR08EdY/N4KinkOWl+0aElAHMJ3v3ygjK0qATV2IIaLLAbpA2glrXWfw5ZnR5uvdqXs5PdcmhPNU6o2Vol6Ioup/TWBsLZm1O5GwQZdIt3hb+DQAZXNj9QDzAR4Dsoolkj929kv8wVLEFa2tFsP5o0zqojmjsSszGr5+Fa1O7CCl68d/qre1CCbE97iKM6ea3hrOODQyJp8BVfKs4M0dyPOZjrT1geiU6yYAA9VZN2gH6kGQ6yhSSF40aNFw5oCqVsfZGVSX3jExW7pfyvy5bTK6C4JfuTWh25PQqz+f7WV8xpH/MeHpiE/b3j/H3HoONBrqsRb+DNJNidzSBwdsgtCbQEy18tI82y/PS2CDq3Tp4th0hmzE66uXDg/S6KSywQosU//alJ3J7a9DNrF6FTJjRPTO2TU3yONVi14Ss+f4IADdhrFq5DMIOnqjDu4V/1kj7k8Y35Hc9fdtgiJQ6gqZ21pZC6pgfp0NbBbghleJWy3eYlw2p8afwNptvTmCdd5O/vdj2Lkl7jMZUn/sOfrjjZUMKhzYwpBtCE9woO+6PKlBRqryc98i645XjFR8+RrFYg7t0RKdHQ21QcJGIL82mm6OFEUjORFxl9qsafUhxaXI+ppYN4XD1ayN1f6SdBuvZ+kjZTV21bnccHBCjmPRswAlfFPEO7b23qJjzjvW0SLTrKQ0QL1Na8iEWvtxnExCiPytpgXEnjFEwTrTLpryo+Q2zAPHjXchRA1h7g8/KHSjZote19jI5kmu2275G1/RR9FWE3AEs26aeuyqStnY8yHsEZKxDlC5CSsihr7EkxxJOgikQ+5Z0ekPy9jvqCgs0n0S2QCPSkX0vMI0aOm5Gt/fo/MUDwdn5JtaqdtBvy3xNO+pRw7eZh0sHYwPj5fUNiEeqU6sHp8aFOlb9CHO6G7VYOgJoyV9Ocmm3UOmDBU4Wywr8p3+WVMeoBxGk2xJukfUVL0olMp1ciBz4SNU+MuUACXvDgGoFo7nyB0+HfcixkAm88R3sNI5/Rl602Yx7YPQRXpybKVgPPBbw+GKWHN5r17UnktkAh/eJPYKG4NbBe7gx4IF1NiIPKdP9XqbiUe8e/EKpLKlgpw5hRjH9VMzoQI/kUEDOvfcAEBbhylXOIooIoRH29hmgQpqIQqIbcuS2gJuctAaataQwMQYy1UrpU+kXVX311Njt/LVrxIOhgqDbEKDcyRMSBh5KyNioqIpvaYz4G9JnPK7Q76p9bgYAk2AHpuS/I5C8zQmYh387g8LjPkWdMFN/22WcrlsSuxW0yJvytdn2NVsNEA15WcCbETOu6JkozckcO2H01YhCK57XKjIgHqFpURolBLg/cWNeVc/UV/z/ens4LKrvMojusGEn3oQgfNX50CjSArdyBB7miD+TSqQOvprBYfSGQCpN7WI1/yRXMEU8s5iz4O9OQbmzszSO2s6gL/R/Xg5HMFeQc4nbKGVJIfGsIJb5H53HOdlSlotdTiT9wR+3PGnQJiqYFBg8sBQLw5/0gXoF8fFnoLnyu+oS9dXjsVL9/FaC4EK+jx921Jt8o89u+Ey0bDjyq8y8sleXLHHkkrA6JWokfRzhfzijMGruITJGAC4cGX7Prm36yuVvoEgtCPWf3MBiQFgnhzNBNq+DJflCVUcZqhLS9bJHhFoTIE0BRfhZSP2ZJ94V2f8YiQfVy0xNtAahmL9nsp7Vr52A47vMibu7FXpYYbumrHc2W+H9YL1Xv0NPrPo4CIwal8zhKBP2z4zJUvpjh4DLlCR8fuR1WboNvdTY+FRiYe+ynzNd6iBJvgcmtPboxkMGR9wEB5S6PFpugTI8pTGaCFinWl58B7IZMSsLQIWBfZEN19KocjA+qQ+y0xrxGtgKZr1rm7dM5QoEKHvDQ0gNO3ty4/vZCV4O+bgrRG+J6/MARjYQJGFD0RJfmEnryBBRdvff3cYsn0g7T9TCCaJoQvvAziD25C8IX1kSRdUTf49/qtKyE9dGSeByUBQfSo0n0yJQkADMsPIjLunfGxkluosucBXKgq2V5RaSBuOiaNopQHWMyIM1w/0PQBaUbLqdCXYHVeTe5ghklwhzX45A7AL91ZY5Epk+fs74w678F0sgNk7p/V/p0K0XXQgW+q6VuytDkLE27LJ4N1sF2G0vsD3hp4k049PhfyzEua4Vj5CNfpOZE1d4dm8Tdtfd2v9fvSQ18TYBKvD0b9lh29wU1RoVFwIDd6m4rFCgC8mFhFk6x2OodwgcofI8W7FBXkx1dj/U/t2yQZU3QcsnslJB4yncTu5B4VCvG2/E+22E7JLxp1oZ3K2D5NPGpgwBBwRebAw/jiTIL2wY5Ru8IWFUL5jnFgJIqhWkLb5oSbGGv5lrtQsy1c8lWNmbMnz6PydJ24vJJx0U9IM5qkpSTAoHnLYnwimudIXQlSaI0b+6h7BhTnJQnsxwby8FLLpo05QT8XGzNOOY+MZRAVnAMbY/q8GK5mw5pdWy48ZzTM7yzpxZIjLnBOquvGy5nxjrGEyH1PH2RUZGo2cEnV248Z3P07HYT50ILnHhHaYKQwPkOKSfILI4booL+hlSA6b51gNGsLOrXV49545FYonPzsaFQ6nK3s2jtWVfL5xmCwbad1fqy2Jqpn6fthjoNpQ1348AM6W33j8n/Nb79cnIvl33FLMaLCskhTpOH90OoygiJ/CFs4tSEl+LCvSAxjss0qCwT9gOOAiD+ftAfhDHb/5OcrkuQ828XzZm6b35f3gFklvzhiBsy2xWqIrU/irLFTzapSjTvWwugNNL6e2y76h3Ok+yfcG5J+wcpbFAhUYbx7IjiiNVQlm8KzLDCDB+fAF9xb5GsYiUD5PKCs7Rjxto8AQt03hNKMlkGBJHDr5XttvFWKS7wYbltw8oAsnbrdXVFtVKMFQ7LJ/nEj2aZnoOspUPz/oI8dCL8Qvbe9PQYrCQn3LZZKS8VGf1UyNk7OehEfx9L9cR3JJ6ZTGu+vKf/wVw2FVK2W2MZW5hOU4jEpnBZxPonPUaARmdwg/b2W8C4Ai9c8GzK1avodzT8NASpOJRPzBPNEHQMRGJDfaNHTUOhrvLYeTyfkQ6ffuTxXNVyXQem90Sl73zGZLepux1+mR9hKtp29a9ppPKn6Y7J6iCsFxhOoQsYTCy8Gk5m70X3tXg73pXIJ5HsCg6LekoS7MHuFKYv+c2+aq40SzItmu0lrikBgSWMZW9yWAe0sevlMo57k/PLCQNEYppln18Yf9bX6UCmejQi4sQfP3T0Qx9XZxMH1iLEbhdXZrQS2G9Ju3qNu81RRfgtDxMrTNYzGPIF9ScbExsYxtvAEti0cui2i28PXRUANuhANh5uUMfYvgO9KlWKz1175tlAK+RGP7+NFI3vZrkcXCa4YbYzXmJgJbMQU47InOZI2LL+J3KDWlSQalwOpUHwA7kPm4fFR3QP0i2Oqh0hnEh35C2qOEHK8JaUoDiQ+fTN7M5kd4AGdLJ0BMgI2IpOlkfuECwFDZaZ6UTVNKFaD5fXLwY66F+2os6s+SaW7idzUgDYhkqNOL86n6A+V+VOjfzwLt9n4+rAaM9GibckMfSejpUNAHvkS4SaxtBapXdMBYzNT3V74fZ8uUABosSlMxCOCyWLxBgmmImUz7WcN19i6L8B990cdP+mwYI2WfkVl6xJUpeTPCSi254KDJT+G/OBjq0M3C9pfCZm5DsBytzQmUL6Tjp5m8tE4lEA6dzF5Jnd/5LluN45UR04o9UX4o2Y7ZFHcYnR4Td0TPqYRlvJF5ZDhd+mJ9zmniJ9ipGApb1I0xifDgERLEFR/rYDUc+Wvxh/lyjg+/uWpqtmj2k7eQir8Ub2PhoJr0qejzLFE5UvuOB5jHMtwCzJxS6qNapE8Nf8gn3OfEhlwE1CASHdZJoW6/dmfgMxC3WuwMAryr+IN/bfOxBcEo+OXXP+f8fJvOFEtvkl0YLQB9fIWmu8USSB7Wrns+L/2dDbh9hzdANPQ/vcjGFqWPSAQ5ll9pAIP6GbcMF1RlwJY1tA+fGN3E2xQWxSysbgLFsmP0Qcd5h8HaGFx/HunisKDCTzkZIe2dSpk0UMRXU0FQJcJiCqk5zddEbvL3IVXpainpF1UVnR2L2AEl8bPggJGzjlmSEAFg6NnnDVh22DasGie7OSi2tle24e8gIendr/ESrY/2TXt0kZVSKnrhBwEzsGUZ1znj0/FSQiSmCkfTDRXRkzxmjX4fJsSXXD31BFpFYlbUfqxhxOA8uoE8SY/Few8JmnsW6UY3hDT79gtcPjk9phsy26NjPCXlyJ318DfzexH+t1PHIZl0yZS7qKhp4W7JwWiSavjRcOieKvpEdHQvkb5y1A/eb+X+wAzVfWWnuhmLweYA1eBZAqOxrOjOAHmtHmh6yhgfMQeR3hKxP8SL6QQ17R6ndhVw4OqwkPU9+xMYBVcAbpJPlmbBChReRdsQza8Gnf/InIFPdsxCpXxCvHTk0yb0+9PHoqMUL4vyMVeCiFRT+ZbjBjLBYHUwVNe0V3FJmAZERFBOz3p+mQ7NnS7kGPI9fHCtZ02JNfEp978INB62vD+eJGGxQ2rFFm4pDwyyCgikAk7VAziN+MM24hnZQVz0urPOKOtW+q4au8iOVZcGWD51doaXtt90Kz3nTrlrh1eQKcXa/O3VWOmTe3S0eoipjKOWLsu1bl9OAo5M3pBg9malsdllhdJYWnUZfsTdH7gzkSQEbg0OIl7N/4vDOK2CGrrksKw4umhJ2RTAeWF/c2DSDIM9lrdr/4HWBElKFtz0kM8ugb+7S1uoC1GbiisarceVeXPW8pB4qZP66jqtqMdSe40SomcC896Mrlf+cdC7gA2LjpBIkoqzFJOLdIzgi33lTMKnN5NJftLQ7aor9b7gac76feeMmKxaqtdA9WKbhXWWS0ET0PQzME7DAlk3c/t/XN+hi37CBz3xzBSRoJi+s3yWRhRynmouzGvfsPXv4bix58TzXZfmiTAH1gfLGa5gPS8QVRnOJD2HzKnVU0dmj/ywb9d88X4jpV4FDBJgbjH+FFD0In4tJt2lp0aseaMmHh8iFVL4WihePO71nLRfftsPbk+uLZvw73slrkSkG3kisK6iumoogtgZdVWOTtuQeb5/wDqMdihM+fXDk7DNIzjL4gGLIBStr8ynJsRTShL5XRy/4z4BYBMaHl750lKbqPsfFA2/YWdmcExSSPQRqsrHyNIg4cUa20VRuUkx374q98QMDp8wD54XbKvYtvhxs6YO6UpgBaO5dZ2/w0NJ3mglAbPbOSKRRdVuSe5t7dzp8Vkt7SfqL+AsdVNsjh3iiTN4GZPkvwbD/5vKpOrW5SnYJ3K5ztMgIsF6zxx/hMDBacF/WgS2TyX3+0uwZZQMFhxdyw0mkLSjpPImyPSIWF+t/beRiBe01fv9oS5Hc8hlBiofk7ozYAhzihK9AWt4Yydk0+b5hWec3QmJJ2fRZTBEbI1R67bl1iGNeZ+trOVGtJ8N9zd6YwDcugMsebl0iJAoCEyfSHdGfgD8oneBNQeuUmMtuPHkCrmDnu7EbdpV7W4XmeiCdhWxquREN25kWGuUWRogQnATbUwpMv/iY4qiRcUCmSm/mWsFMcAV2KAyqJYZon9SzENBNFGck106kfINSv31hcNVU76yUyjjmFFwkUIt5pVMkz5vnQFnrsIe7gdA76w411DFupiJA73FSM8DWEFUXizVqJFi5r/XnjlG4tl+dDrrSQxYRFDeslfMqbY/suJfbHurIasxb1NVhY9E3824yonoyKc7ys9Hr7sYupcJArVEC0FApSpik1ZXrxgSJ6JpKoFfQjvpHPJmJw16z32nxRLmUdlXWjkR+lvIxHmcFHtikyX5WbdsMnzIzmnv6+AHohM+tjSlUQhH/1oeEQ+XSCh1rTKgxJd2TcWe+3WuHiSKFKqAHoo8l8+2xe6/x29MZ3rgJFYxQCutHQkmB/L0ks942dz1CEwcB19tS0WxG91dLIVRMvzF689hk2v6iDQXnOMWWweN5bphRUhdmBjY0nviv7DwnFuNUbJcYZ03T5t3cFIKJHrs7JkNImVAHttFKZ4rSk8YX+LgSraOvwV6c4AC9pgJmmwO//VzJVMjRcV72yzTTicqMg9B79eq7KvfW+HrM6Kdili16qDcw5DgZmG5DI3Rme6prNdgi17XfJhxNGf001msPWo6Rmgp/hDdUqZtLtUBoApOQTdZP68Tk2DKu1jIdFbB9znXf6KDEj0uWsy9bQrWevRtrWD/eeI6ySCrRyubWwPsDI4rC8dO9bwTiK83+l+T7rjai2/fFcTA3dGqChN8mo3ua6f+Hpqa7lNL4BqZabz32HSWngZo3yaslYxi40upNpC2GLjLGAVT3Dyju7X1tmJ+kkO1YAquyUjJ1+Ct6RwDfSurlR/oTNfmVmjHrIVArUIqZGGrsQkqvxEw9/yFh0HQ4W7dL8qnea+0/hxGYSfkmLfIWpp5aTcUk1e6bZSB/popjf6GtyTZrgbFR/hs0QIzPMiXalO0UOh6A/N+vR5iC4PmwIkP7rHj21Z0oE2bh6Npz3k4TGGdrv0nN2pp6FdsGd8fAsZYXJ+MUu4Vc2orprWrXS+bRR3KEHbfF2ao4gGiFMZItpx2TH7lgVymg7IWgwPvaVa9Q0M8yLt90tRvfKJYWAk4OtjNJlSQiX5q2lDHF/6QSwxLK6ojqIdlLDWKhgebBVff+DZBWjulVzEUf+CtrBoAAb3H1Di415uDXqCTOSAxC0X9pFbZ8YGAN5cNT8d0O0eLXgORWw0HWlRiR8+OWcMXMJThqfKDiF1Dtp5xjBSz1+gj2lb3KZRI5ZE/TOZ1dXtgyptzkX41n4bOFIAzGXQHQodf0bjnLd5jOgQ+yO7GR4+DdvNa1U2IrcGlSn6kaYm8dBcoT7kpBgoG7Izd8/uDm7a3N7ONU/gFvU8CTeiHStseZWD81TDrvtuW+hOvp9s01RuXaZ3/GB6QSI+yTgepd6mSGOldPo2hDQp4MpoaMKmRAbqanJWX5U+6+alZRa+g0hux7UPCoAFpvcywDHficzrE3ZxHRx2gp+CLLxkO0jyFBZVZoM7E3AarjK76YVDcHRUj2e9V/0HTJbzOL//Cv3PHe9slVQq3F4VA9vf/sTKLnbXRVvAbqotbYcjY9TtEvfz9+vy+PjbApkbaWJVd3XxunyGtCZoGYBC90jjCOK86lvCMNIl6AUtZpRf0laJA6NneZlVWrGGdg/ehqMEUzgrLmh5XuhzUa1dYYfvyaMCJBYkIJEK8Y7VKb74YwvzdoDUy5+PsRqTERidNvwanqkjAXBvLsFT+0fsZn/9CZkQVEm9zEy4D6OwryxcfKcZsuSNKH1syUSL0AUq8b6TvH3eBpi37Z9Nigy/bMsyhZZWtkUBhr2eWAaoZEyM0xWQbfykPkJzlAOzwRwj9fNkhG968PAR0SFUj9J2VuR652MYSOhVZKVfmWDoA04OB1oqNpZR+8KubyFY/P+fxEOkjF0yv9FeZM1kVSGaQQaKzs+tn2FeigwobJfhtOE/kt7159fIDpp8FSP/EHhQt6wI6iz5ZIvCW9KmoEhPvZlwwhDK7UvA0LWxbmYhA1Lw5BAYCeba6342Ej/gJKygSEuadhwEI0FHBLdVnnJM0rqcu75206fgz2uxSILyO/aiPdPqi2BqooPV4Nb13XWR6ZGbmvAvrh9fF9ap4YvcSWx02q6oZcg3uiX8zCpzQsBBtqCPYqVy6YvQPg9sBdiPRqJPvtUNbaoRoAwfwmnn/UKOzdQIlZKkaxKpE0YeEgeJ8USr7y+Z0tmBAozgBLbMd2yPaCkLPSNf2E8BBHEN3onVZroiN2lm/oyQj7a3db5C7naejJB7ZMRL7WKHnI7//p3f7ZpCC+t4YuIUSDMw0WaxPzhSZzkmxPZ9J6Ge2C2EKSPuwHiRqkknB19ePB4/Fey0TgbKV1SzsythbSJLstF2r06bR3XP9w3ty7/KTdRz++NJTzoZoUhxA//QrKBl1mhL6TJaCHnNNSBHZ6q7KXCgEsmuoOCdJbd0Ap0roKDbexYXmop5UN+mFb49iMf3QSM7kmABBbP/bFzt8B3oaq/707LIwFdGdyD3g8vufqOEUa40CLjSm7surAJOOg1vP8jlm0ElZpn/+sj8rDLUu5nvQpvQy3BX1oQsBS42B2WbH7KyHiYBNeqyRgR2W7MYq0gOC/P4FBUh4q6frtYGODjvj+BV6kAeBzxhp/HdWLlOKQqb3XrN6a+OkDJx1txxf3DeV/PwXdmPFR3Z/JKK2OGigkMoGp/z+bcKyCoEOXqwN74OteGH7GF8ieO3m+5hW7KgwHuY9vMZnT2M5R51Uc+fKhvCgWs1RREdlxJ3ojnBCJWjS7SsEjGyUkUOE1R+6ipB4TVB1UAuQhpVRsjAp/+AZPhlnmNb4yiKewnmZE+PYRBC2OuMuIsfCSBfUfW7qoM1Nc2gfDpAG3UUK2pFRCU0q3m5+LMd2ZYeqC4PFm1W4P1CQlxgRAfKjy1bjdupzsdG2Dsp9++ZXgUZnDhIKBA63Mh1rMk/FRd2KTM7k1ouj82BtGbuOFFICrNC6nLPU8l8+GZhjaSSHUsDozUXXsaxGCuZgU5WOiuQlo52cpNgNbP1AWEakiTgwl5JO/KVSNnvcbQuwZnN15/9pENej+cG+GhOtfgWhkVOCIkUlgq7Zoxp8LB0g3CK4qyvf+E48k11fr+PyXGbjqaXLXHDGm7W7UuFSlVfpgtNlZFRZ3zGQHaAqZ0lgyqy04NGk5sGYVG/U2aXP6qWC7q6L1d92PRNgMuZJ4YgDlxlndJbtLaqayg96amdBzcWZ6Mc0XlzJs5GqXM+yVFKnZXRj5Z3j16gTqhq38NNMdBR2G6rEjShlyXNuaXI1bnkvnxQnABGa+PITE/jjDRBMgELjWEJY638VCl0URNvLLhug7ZPcL6iCLSh3RJD2oMCH6kzHX/MBq+GKNVRIMh6xAaXO2fcYXN6UW/U1RVwejznO1ANXK3f39PHLU6VbsHSlhAnv1TMjYVd1bo+iISDuoukMaybI7xl40oJf99on529q+YMgalX0/ZM9VrOECpAUMhzNqvrxahxPmZttQCio/v8K2wQDAEVsrhqKy2IopCO61h0KUfn2B82LOx5Hnsfw9Ek/7Wl5JokjQmKfUFiguMLQHoYXiCOu3LHPGAncjaHLU9EtQlnwSK+NVS4QCLoCrhppl1zxl/wGxQmZcBuLIb9pHNjllbQ3Z5aQES4IjXFxGnAkzrNpYXo+yJrIawkaMbLKAPAaG0r/uDBCvKUJg9X/3lucMq7+kM10z8qM5OU4Gz1kHBZ7HBmqeILwCs8woMsmFx5Eq8bZz+wpIfmo6Bx8TFO3SyuJZl2WW6bKZeWqkwYvzQXiHS/ugoFd/ntW0He9Qm1RQbv3z9tV+HhWt1lcFkDgiThtpVPoK1QdR+5ThbMC68THryhv7KqFY8Z0TrG9E2lqkzXBcHSHAz5bca9pil+cfFUXHQ1z+coCKWSUlee83LkyIGVT1z87DCOFknex/omRKf87sviuMVx7VyOQBu7MuMetNW7BOlLKVI3831lc1wc0qTsUbVpOLGDvrXXOu9HawaspgHuqpFvXEpQTjdHaYu8KY9n+70w30+s1yYwXrtGmYKk/fuw5hVpKLVHfFqYqQ1FUQSXvuOqg5uo45yByju0otXMiSvTAYrPvEudjpo3IG5S5b6KEutsJkswLE4OZuZpTXRYrcwLtJIcfoWWaMDUWsyhLTwkpSJWOOtk84oWnlA0Zg3GWhnAopaKdSglLK3K51S+eowJ65tyAGf2UZkStGZA21Sw2Wy/KvIkw7Puq5XhkI6r2P09aAf3MIJadFYi2woDbNwWxIye0HAVWj7EtZ2s8/qO627RcP+0TCzqfBXXYq4VuR9H5uhrBTye55t549RnMK44gXEed16a88C/uedjQCNp1IfCYGCafu+6I3jkFw+dVHTx2J3FH4ZTnKAvr/2l7m0b4YF3OiMbnoroYyGwF5gQBEu/sBklD0X5ymV7Ws2kRm9ePaQymsc08mG3gOTL8V0EkLtDVKBBySvfXIXooz1sKVrXkDg9MAsyJhIoT5LDYO9Qr0fhGHlrCzOVcDnBgbrzGpbfcbv1PTPoviwmLUZ6fvJW/MLST97NhnVQFn3qrlIL36doiyMh+p447FzW+BWsigliMDb4S9p7HtOSWddeUoa4ELsMYGMzUxeAl5GqvwbByJqlXtOn44KTe7AdfctKUArG2cKESxAGgKHv0kORApCBx1mokPsgXlSaZE04KhyeXIsA1xidXZluOuxUe4qBuoMN05nwLcA/conPQke7ezIjB2FrpJEVwn0t8UiS10OAjN+6hH1Ozh0LzqDuzmTXuEP3mU9FIV9KuFSNogjreCj2842UevYnxl/2FifzzQNGFxUFMjOeYUqDMuASVHYvV3HQ+ld+5n73D/l9uyfvwOzqKq1Qh4KKGtXEtgZusXdv3RjKwoU65UeHCXlMo3ykVAKEBYbp9Vb4EiY/roWb9/EZ/CQHtMZbGJeSk4+LH3TgAP2RuP5r+1GmhVH6Z88IKMt1M7fnxaH265HU10emCWMURdIuXHhuK+fGZF8WDMEmKsKP96F7/8XTSjWRlhvvQFWPj1aj/uuPZhM2fHPzOyj4z8ghMRmJmFDTm74B5i4FO9/1gqOTj/m9pAO6PR3apKvFRp4XnixewB9Fg+/pbxu5nH4nQm+jux2aMQh9vI+J/wL23mm1yzfjh/Br0ZjsRpUNIMHTr9SlnvECsTQTx2SJ4LbyaFugE5GkTsHyqWYVX2n7NdsizTRaaR5bxfKYQ4ZO2mtfEkSGMU6SicSRXawDzCsv0ZtgmiwrQmGOSlqpS7T/Z2HfceNlO8WItA8py8yYbc5/WRWDHlqd6HAaUS084GZDarnF67+ZxoloUTeIS/PIo3jWiUm9RisSj5yXM7zvBsv7zXWAkASLRIOlySckw/llJAkqgX9sNXVqEjXcrG2LB0Lf0DKLUrWCRSsGSswuMtn+MiP7ABM8xHtQ1x4rAbHX+l5R9qYBrgFsBqBrfk27Sn8QLAH9gS6RTZdVxKOy9i2dzAXcJ8E1Q9NP0fFsQIClilYQJt+Mn/OvLygIMWosJHg6VEG+M/KJn/TlH20T950eKl2Ze6Kaw45D8LT1HqmmLZrvDjVDWy/k2vhFObLoXeI7+X7UvsSn9GG4PbyflZtgCCAO1WCtOeMRJ/O8KVd71GKHE5y0XE/FyIowSOovvolwZH0pOx35dPpxObKbq+Mi24Kc32AkXJXHbFA+fuxKF/C8u2Zoe6v4BT79fBAlbZ869p3CcBIJJoWLNZVriNdih9558Z6nFODTq8FIqRqKjWZmT56DvIahhWv9esa8PUSgZs9nVBnXOqsPS8/3fuDwtF7kfddAFFZ2JAq8bSqzoz95L/ZWJqOUFidUYhfwa/3g/k4hBlReAx7KKdN7H2kUyZ4WsgdKB/5aGyNF507SQ4OfqzWi3I0hVe20iFFMdZJf+e4TsLGTuiz3HnnKeM6ohC7jG8TzfzCZzV6QodYyjxtDs7K5wkPWK7P1U++3Q9CCm8pnWqSo8y0GgQC62jQDdYGaxA5nExl/ie5nKlkIHBcihJOnlgmm1sOT5dukZEn/XceSNgWsud+AzeKrzHN2WdzOHTz3Q9hOagqIfph9l00fJiK0ztTVByLVCIvLt+zriuCAUZ1m2cfukiedoo/EgxUhysDf4Uf/2hSj7wZtF4xgHZsTuTXWJy4TLRFf3XHdZl86mHrzZCOdqL8WOmEHmxx7CZMRfDfUxpEwuo5ezmMS9Kkz7g2ij56qEAWqRdtzs3tN1MBv+9roUTx/+HZEP2ZrLAmG3LFmalKNw4bKZwQO327syLQNEMYx5jOG4P45Lc+Rq2GxPu3ZXv6SsJT6ewyXoFNPieblfe8TgT48Z9txLBDPsIFeSFWtAKmHLRA+h6ajS30TeNExn1EZUMXCFAIKKKF7AvsCUmkAXdVz1jbYXNlcWYSxt1niKVgeTrBkYqYwVEUJNUmA3EzSeBvpB4mPNVTDhPm/6tGEbeXdoE+GvYXGsIX1t4I+PLpHoPfOLzOV/txrylkZnzcSWxRXAtZ4+OK1yRKqMtWkoNibRCa5sF1wn7N1hEwkQitdObsKCQoqPO+wi0X2PhvvdxA1TEvuCTBz5pB2NSPUOZFgPpMhnpuA6Dv7CRAtvfAgKQhvLbxrf9xmMF86uFGNi9N9hyqAteu6v7fHzIpsrDAcv9HztG9sVk55KkYsGBy3e9RrpJwp+rAhu+lW30ZbIRYZMSETupA03OlcCp14d6YLmCrSkNx5cL+pmi9puFH7m7fDjHIN+0d2FPbYXq7+gmVdU2T+s+dX2lJpCi90nigD3paUOiyXMW2O8cOghLv9dUjvRAPO/nhUjxPCQifyMACCAo+c5Cltt7faeSB/XTVKupBVbTOpRXBGeVyGqR1QNIli8Q7VyBc5q2SZsk/DnWVrzDteStmCB6ALjaiAMQU+D5LQC7pEhTKpoDDTF6xEaDzW6mei7aWJuqrp7EvO6IoTmWWviXvc6Dr9pu94COFvZTN+CjHPmzFAEmiLT4S8frfSZ71KHQAVx0HgHXUx0Ql4rjhddz29cePqxWbtpNsTRQkAA+hLQhdAXFM3717kbA29q8oUCz8XOpAuPGZkMhDa2ENSu8JIIxJnWbqTFfDEDi04w5/3z81lxiqT1xSredQkteJml/eG/MjbI7S/m6F9CQghnH2yYSLTRE3h5Ybv1WhYr6VmTWvMrJeUqFsOy1psQXaBr2JJb5byh2ygRt72p3MHFe0DhXz7xcShkL5JuDJiuQAsMljskRcD6v+iC8UMrtA2qMnYztOqy3jMNpGc3TDR0G6RoRZarEcdMh/QYZAyAo1WL5WR+1Lsnd0o3TYc9zv8xdMUV4SojLWBg7tyMavYZpIHlU8MhSJtfAumGNz8sleTmaKBsTw7qT9K/S4HztT4SeoXiGXyjEShUNImD51mV7p4nyAwujSfDN8p4QA2pORxvbLA5/eJK64o7yWBfHbIxgSZid+D64qAOdwb+5e4NyRfQWo2ir97j59r7lED2LxCr0ErQbo/oJcSXY1uCp1AX4j8uLEavno4AvU6ZiUcp5xkSfZrvFt+gzyVLBzoKtoAsqDnwGj90ewIEyxuI3SNT0fpRlnaVuOer3yFDUgVg7s+XKypjCqZp7dAMVe1WpCEnycfSmvFnAQFYDKT5fqSectobAxvOTgHOn6ynbM6rkXmkQ3rOKajQmevCcChI3b7AoXNU1xqkL19HpoIzHVZy1Trt/u9gbiR0pJ4KsrCwSE3wrsxwMf9YaMN1j3AGiOr3ZHoA61y1/SnwvpuTPZP2+KCAWKQDKfaiQ3qDn70eMK6T4C8f+0r3aeflCX7/gAmn8274kym6eNk7CCqCu56Z6HzkKwLmFF7udmHeoM84SA9SWGSCaGaapWUAp3l/ZaY4rDh3NNcBSGkFxx0Xc47VnUX2eyUIXEX2ynYbgLjj193MU/blyhuLNQq1Yr9FkbWf3UuPXIgkfC/cUau44Wg9ZxRKmpdV/5MlUlttVp4d6cU7KhX14199o4/QttttnyK5wPZaWqq8ltEd/wB4S34tur9FUZgaelHZXK3/bz13rXx1TqdJwCJacy16mOTori+jKeu2Iqi/UH97XYSFCdb/ZFgZEZWorsmDvl1Kk3EjNVoO3fUtAHsf7LxM+RP8SUt7sOB7MYj3N/QNnxtmUs8yD0P8N+bgH6QeLjvCsEexvm++WNNzvWx8yS/xY/drv0bAhxSzrbfP0DuXeK7/35I+gk/5CTegB4OR/yofK23K8ClwBzbah3nX2xaUNhrL1ZpEHS2a/qaj9FUUH88Ez0sftDeX6SvvSEZGsIU6LK/AJZUtBhrDVeQVSZJ8DqriCGuZh9ZAvmrqF8X5wJshV4TZZ0Xxfztn1sIc4zCg3rjAdckSKjOayPO0T1RjSc6k8xPKquDIEirl0Mknm/nPZhMb0IPjcow5ETLB4CXqBQoGsyaxiBh05CZgdJ1rjE8mRR3AAAxRSAACFUBfTTWQtC3VpiOoptme1EqpeXlK8dX7z4BDjijoRnsXP2/WG9aexpBnMbqfIAgFOKIKw43LYEcwMFLPXT7SuAIlAarnKGdaLhsppr6vA1LzbPcvu3WsaJvBckhbDiY4X/ak4sIrjHrUU79ehBpeKqEaTOYct3YRmCF7ZFNTz10xxrKRDngzh+hiVccYJaVBizUuzhSQlfGh7bq7Gp+iQkqHTJU6Lj4YDP4BHq85Ud6CSjyAz9L2MtuZkhRK03JPaq6f66K4p4IVX2+SrsjQY+k9ZKX7oVLWci9ZETVIG3vp+ziTx6Ukm7qB+sugqFmfUooIr1FHMEGmpJp7t/5C4NS2QYxFuPZuk2Yfnd6aj7k8qvChbwf3sbCyF1Ly9SWluC+6gUyN2EbOgqWgrI6joGscIns5dAdbh6WS/5+XTL1cLf2ittIQKxX5JwGndEDPwDbGsiVG4l8f8/j2DtxA8Z/KkC/rLYK2KUQGcQ/zF3qpGdpYn8LvT3SbnSsFSJF9q/ux6MYANRZbTAtkDgyxPLrmy4rmTMJA06YlzwbRTlwVLuWMuGbn9Yvux4ZlsleJrAeepzFrksbWYsecZf7cNyuD4BhZSRDHBunLPgK3HBQI/aLiMWiUsRd1dkergaSnK6D9uO/flYY4GHwujJEqlEkss00bDMZRNvNS8coI69OFrTSf7JEXCVw4mmwPGn4a6Vveu/0xAJp/S0F2t7NYDTry7Hr44IHjb28d15Qd7dP1S4X+PVdu1swOokxPLKJVk2W8SoTLiAFqGMS5YUikp7RB/WXksjACF3sKkuK3we6ck7YHWikpzBnuL8ibwcy23yqbBEbxm0VWAQQOwlsw+lii46Y2EIyxizKkpcffDKSefyV3L4yhIQMOrVXuD6/FQ1wR9eh/pW82VBDekmLjp0f+fKrCOumure3hAJ5Q+NShcqxFuSwjNeNQ4gwoGU5Y8OG0M/lasclmS6Cve07ZmYffvFPLUby8+ZIpw/eK2VC0Sec10eOcGPOuIEFBFzpVedtP+Uad/yaRGxBPStui3HcLQFhSSg6TLYUdQtOu+3wrbgElz+t1fYb2C62ICND9H6S9g76f0JFNetKxeEGr+kHw/AfW0K010FAqcKom+6/bcMDKeXt1W2pzqNOCpXFdVzeWjuSFThOPFqMzMQiSid5gmgxlOtVdROUUSmXdVlsV3OuLv4ckF8B1iP6UbTbvOJ952wmVM0ZFZK8QnT6AD+bJ7CaApLjPrn45w2Qv72Eod43QpGMMKv5V6EDywl6ODPTl3sXX32dSteW6v3a6LVA/uNLQzWfTY9MzhO8sbRCnsJlpH4ajAj2rGQsT4nZP9NwUruw+7vGUef5Hjs2e9aXb/pM1yTOC+YWMjJz+Ump+XCCRmCpFCUTgR79g6Z684TmBDRNxurnY7oACuusXgI43MzhNzNHf/kuUVyBiJhlTPAe/wMv/hGqYLoi0SXanuSQeKZHJ6p9BqjtVhvBNvYVu4a1sSIcwIHAfBMn0lmz86L+OTdUVN4k8k8Dd5a8FvTXyWdbX4d5VgAi50fmcT17gN0mm6gE9auqFSW2iDA5G9wn/UcOOCUKU5H5xZG5hsQIoMyTYDhbHh0O6UvbIIcDpn5yiFv5IIdhnOC+ghPK9/KhNl9rA4qQ3nP30dyCoYdR4XbUS7IBQU+b9ZQHWheIE3UbOl9WkDoTr6MLe4mzRcBgUiEiGNz1vZjpFgokrV2GNqeaJuZz+LW+bjehPj/QMctuxfRT24fYAv6w7TtbDMa4L81jyiINDtkpQwMCzdeLVDJzDzCwLHT85KgTnhNh6zI4glaZ9BkpQiRY/SsjCUznYqSsuQVwtnkqsdYgEfJtk4vRKhkrCo/h4v5M5vB14Fs6d8bZ/FCi+4SX8Ioe7qYzK9K5o2+TIQgRvgiscPr1ABqzHPxoiK6SAnalsiS+0Wlwet1Zfy8QiMgMagjX07qxpqhxpT0VngfF+TvulL24+OriBhjFcQVKIw1mTCS/epHSNFKYvdXa4foeT1DPO4DhMNaM1kZCrYLz7v37GY6QMwwnd5CRul6IZ5ntGymL9Y8hXpPEIkcV14rRp8izFWBldgxbUpwgo+Pa0dtZYH3f+HaDlpIUYpZx6AHVZfEGYeeCNWTDFZSaJAcGueRhIkWP4PiRSfGBgCGFzByxHQIRcnnpwYnbEF4z4LpDVfshjfitCajCZlCK2eFW6G3456CaTxZ+UM+KfvmMdWJU2BwwZD2OgxcXvZYdtdcJgRkdcU91wDRXrVzp5sLpDcCIbHqf0b3GA7aYvQTyE4RC2EKIZ6OgWddISr6rq75rZybabbQbM6qEqlbGi/nvFdccjlpVwz88O47TYNdvClTscSwqjXP4MV8ZRzQU8NReOHLe7bqYv/SOiBMwjeZCUdCf/Troa6pkLRRgqXb8xB7IqZChqzP4VcOVm8dDuGOHqo1NMAD4qDVLHZMIPuGn/H97AbmBXLPdtx/kjxRPEpbQte3O8tZ6uID0P8Zq5L6nBpXAgmiob0nD2cFxf6XKMFd1t6wy/VGs52WWUxe0+ezUQmb8AmUvFjVLJnYuL/thbWUdFsdEImgYvafGGpvDLIMVR2a7rWW43HV6K7y2dukVevzao8F071dTqQfYgn+/QY5VRGre+QUZt1f6vMfM0Kv28xzzfq42Uil8bOW5/+fv/RADwYxEMQ8NEjWHC8B65bZo2dmmotBJ2tWKEjXnyTMZWs6XwkZZnBAtAmbxuTJuJPJrDXU/Jzs+6hCbIzTV9PKCHSqNufJsDrSJHbtbRMYfklizS8WDXtXJmy9oUkQBZG9Rm8nSNhAmnGFmP3DoV3DtCfdV0+4V6jWOrpJfvaL4gGUNAy/O3VQBOZnxADbrHcaA0ombyPIRYHnqvk4idTQODXZTkojVMLd/HZYuIXg3bVu09HtMJuCbjZBZsL+fZ9qsez1y2dYTZFl5pjzqfzbUYL20b/m3l5m6wFQ9pdF8ph61WBYHYLVBk/sPqheUH98wS0lPoCf31u7wNHq8Nqbooaw0j7snCwsYNNqVcEQ/N9s7/cJ37shxhPuZ8Nns2ho87IKm+OZOI5ej6756HP3tZ9YAoqgEZnHexVmxba8d8z+LOVTfScwUbJflkLAx7DPWvHQMQl2TwJuGX2x75sfINf3jwbCLmOkK09M2uI8LrJMQo5luGp6D0b8dy1CmHzEu/KS3v3TB506c2/u42M3sRVjbaQta7MwUCKgfvPkkkrEYrpgQPaLZ1Ta+vMitSUhpK+7bOZA9V8dy/udi/llYDz/MDAr6A6LMkBEmZSwPYPQOzTVhoskFjiINP3HEfA/Bk+yYKIEZg1fjp6SAf2tmC98Y+z7PTG+XxSAAypG3/Egu+NtJKQNEeZesLC3MlBBJbQ4B2soPt4bJ7rDtv9adDf/e2KUk7OxgDq0/GTlQ9Im7mAnesyX56HnSFM/uVxWjRcsl/nnReJeRyV0/SvXPMVjE8NcD0uto1c/kx8sAv2BMyPQ1Vr8C2URY/QaMdt9aiSSurai260GIU+L1PxxRkfBVt4WuPkYsXsouQHcCyKiTz037/PySU1jfUxZ5v9LKWHFRS1o6G1zGXDYuta/xojzERphLWf6XJRuhkFnrX7UaEgKFSwYAMY2fGHVxovq2DSUN3AetwFdLCwnvgrEsLBvI67b7knkcN3r6bCvvBFF4gg4tdKP+QrXi4HQOcUAk6hu8WlK+MDIf8WE5lMo2Ckmnbzd0rrLqOXlnONclln8jHXTLlTQN3OtYqmUj0DPbvNc6gw68pP7lYRVrZqZ2XqW9HrfRg4Wwh1YhNsg8CntgPm+hfH+7dtArF5ce785yf7LYXzAwPVHBmackSWrVB+OfQsawlCfaGxbW4t90GUnXNEv3tF8/hBEVnFr/chMw3uR8mRwDXJjTaYhtDqUeT6BfUh+1utxZ5K46RkcttGSEmB3cFlvZeocPY35z/GuZVwMyW9FX5k2TxEh1ztArOBG8CaWYFui04PEeIeeZ17KlPGqiieFlDaGJbaU1+UPf9x3LI5kFmYyVouh6X/5H8SA4mViiRoCDxEPc2I3aqPpfYnKZ6JQJjCKJLACeRP1lmKSKb/39/VMxTNYSemotA75B3Nomx2qzp/q3x3H20FSQSwwolLjMcvMF1M81dKLQPf+MZpx2UyRjwvPn/hmSIbJuN82S0e80P5TONAoWjWlwb2U5grnONdwP1RvChc2Xh5yFNu+hh7lp5zD12yif+V2nGyaABWBF5f0ulpsV8Os8V/nuivws+kwtnJj5HhbyjhiID/osPmVW9rUP9UzxgHUcTyoaKRUjtIJElkjZGf0irQEcZaGJi7aMC/gaMu8uWGVV5kQx8uGTtCtYmTqyDUJn/mGH6GVXHVs7LrdzF8xPXQG3xbN9/LnTE0GzG7Qf7ryRWEY/RkvRbXf17OsIyFWcWGrI4AiOhTm9UBwL1+NQ4oMuIdjBkPkFMC2bGdsrmf9+QoVbOkJFsvrGYl2sZQN3l+YxuYv+fb7DC8zl8GCBLWwqs049fYryqBaIhUC9SVGU0bqeiJjPBYJC9S3Mjf3zt86WgTmB4giQRKGp3pZatzoeqDL3rv5C2eFzzrpSQPQzc4lm38p684macpX8bbOQjrhSBn5Sp2nHDvz6uNlJ2j2btOouguag7lRXjBFpNl6HHdlT/B9L3UHkvrUejFKJ/YDGwsPT7qPRBvCaPyvOSjt+0WWRj1ThtJZWdsASeiLk0wEr+lmylpe+eND22T+4GHF+ZTpXDDwO7JV532/Asl5ZMQurAk7ERNXlJvand15RGE9bGYSwFTvYbYJ6T+vkClsJ7MrRU6qdBgc+uknKQuWsDhkhfoV+Fk7sA98F4pomxtaI/jjTDXGzjqGCl13EVJUoetyZtPU9KN0emdup/2ljyN+2FgkarZGg5awHHO/ku+ubXYNpnTe4W6SfMY3hs8OnCQuheUGsWPi1INV+y5pTL7KFvxjvEoGdZaJ7IVY+HqrpFuxW0TNBBu+2OvsaV1l4T1REHGzqR+IP1QafH/UTLb5oBYSq2bLkp278yU6Bn4q2NavNnutY=","hash":"77bd0be9a63ed94964953efc645a4d43d56e2bff0f68239eecd69227be9f310f","wrap":[{"iv":"4Wb1Zc82EapLfIFK","ct":"YyIG86FqNWwGePDF/486VT4fsR/Hgo4Rp7h8yxItXbpcrAr6yYUV/7mY3YSnWy/V"},{"iv":"KdOl/nJpBiwyZxsC","ct":"qRW7pJXjUsiiCSVhsRuJbOCI7pNhMBDQ54d8kuatDlhmqgoJp4dt0B6b9J8DuBow"}],"v":"midq-1"};                // { salt, wrap:[{iv,ct}], iv, ct, hash }
+var LIC_HASHES = ["85f3e471196da859a1561dbec5715bb53b59d303506843ff9a161c14fb70b68e","7cd7fe9ad9d90ff3d3df609d35d8d1a0bdd59b08665c6c19b8af7a547ddad404"];               // 两个口令的 SHA-256（构建时注入）
+
+var CORE = null;
+var $ = function(id){ return document.getElementById(id); };
+var enc8 = new TextEncoder();
+
+function toast(msg){
+  var el = $('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function(){ el.classList.remove('on'); }, 2600);
+}
+function b64ToBytes(b64){
+  var bin = atob(b64), arr = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+function bytesToHex(buf){
+  var a = new Uint8Array(buf), s = '';
+  for (var i = 0; i < a.length; i++) s += (a[i] < 16 ? '0' : '') + a[i].toString(16);
+  return s;
+}
+function normPass(s){ return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+async function sha256Hex(str){
+  var h = await crypto.subtle.digest('SHA-256', enc8.encode(str));
+  return bytesToHex(h);
+}
+
+/* 执行核心：new Function 隔离作用域，核心自挂 window.MIDQCore */
+function execCore(text){
+  if (typeof text !== 'string' || text.length < 200) throw new Error('核心载荷缺失');
+  (new Function(text + '\n//# sourceURL=MIDQ.core.js'))();
+  if (!window.MIDQCore) throw new Error('核心初始化失败');
+  CORE = window.MIDQCore;
+  return awaitCheck();
+}
+function awaitCheck(){ return true; }
+function getPayloadText(){ return $('corePayload').textContent; }
+
+/* ---- 口令解锁（enc 模式）：PBKDF2 → 解封核心密钥 → AES-GCM 解核心 ---- */
+async function unlockCore(pass){
+  var env = ENVELOPE;
+  if (!env) throw new Error('许可数据缺失');
+  var keyMat = await crypto.subtle.importKey('raw', enc8.encode(normPass(pass)), 'PBKDF2', false, ['deriveBits']);
+  var bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: b64ToBytes(env.salt), iterations: env.iter || 150000, hash: 'SHA-256' }, keyMat, 256);
+  var passKey = await crypto.subtle.importKey('raw', bits, 'AES-GCM', false, ['decrypt']);
+
+  var coreKeyRaw = null;
+  for (var i = 0; i < env.wrap.length; i++){
+    try {
+      var w = env.wrap[i];
+      var k = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(w.iv), tagLength: 128 }, passKey, b64ToBytes(w.ct));
+      coreKeyRaw = k;
+      break;
+    } catch(e){ /* 该封装不属于此口令 */ }
+  }
+  if (!coreKeyRaw) throw new Error('密钥封装无法解开');
+
+  var coreKey = await crypto.subtle.importKey('raw', coreKeyRaw, 'AES-GCM', false, ['decrypt']);
+  var plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(env.iv), tagLength: 128 }, coreKey, b64ToBytes(env.ct));
+  var text = new TextDecoder('utf-8', { fatal: true }).decode(plain);
+
+  /* 完整性校验：核心明文 SHA-256 必须与构建时一致 */
+  var got = await sha256Hex(text);
+  if (got !== env.hash) throw new Error('核心完整性校验失败（可能被篡改）');
+
+  execCore(text);
+  return true;
+}
+
+/* ============================================================
+   许可门
+   ============================================================ */
+var gateFails = 0, gateLockUntil = 0;
+
+function gateError(msg){
+  $('licErr').textContent = msg || '';
+  if (msg){ $('gateCard').classList.add('shake'); setTimeout(function(){ $('gateCard').classList.remove('shake'); }, 420); }
+}
+async function tryLicense(){
+  var v = $('licInput').value;
+  var now = Date.now();
+  if (now < gateLockUntil){
+    gateError('尝试过于频繁，请 ' + Math.ceil((gateLockUntil - now) / 1000) + ' 秒后再试');
+    return;
+  }
+  if (!v || !normPass(v)){ gateError('请输入使用许可密钥或快速密码'); return; }
+  if (LIC_HASHES.length){
+    var h = await sha256Hex(normPass(v));
+    if (LIC_HASHES.indexOf(h) < 0){
+      gateFails++;
+      if (gateFails >= 5){ gateLockUntil = Date.now() + 60000; gateFails = 0; gateError('连续 5 次错误，已锁定 60 秒'); }
+      else gateError('密钥无效，请检查后重试（' + (5 - gateFails) + ' 次后暂时锁定）');
+      return;
+    }
+  }
+  $('licBtn').disabled = true;
+  $('licBtn').textContent = '正在解锁…';
+  gateError('');
+  try {
+    await unlockCore(v);
+    enterApp();
+  } catch(e){
+    gateError('解锁失败：' + (e && e.message || e));
+    $('licBtn').disabled = false;
+    $('licBtn').textContent = '解锁并进入';
+  }
+}
+function enterApp(){
+  $('gate').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  $('licInput').value = '';
+  $('licBtn').disabled = false;
+  $('licBtn').textContent = '解锁并进入';
+  initApp();
+}
+function showGate(){
+  $('app').classList.add('hidden');
+  $('gate').classList.remove('hidden');
+  $('licInput').focus();
+}
+
+/* ============================================================
+   主题 / 导航 / 路由
+   ============================================================ */
+function applyTheme(name){
+  if (name && name !== 'violet') document.documentElement.setAttribute('data-theme', name);
+  else document.documentElement.removeAttribute('data-theme');
+  Array.prototype.forEach.call(document.querySelectorAll('#themes button'), function(b){
+    b.setAttribute('aria-pressed', b.getAttribute('data-theme') === (name || 'violet') ? 'true' : 'false');
+  });
+}
+
+var ICONS = {
+  convert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V6l12-3v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></svg>',
+  batch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="11" width="18" height="4" rx="1"/><rect x="3" y="18" width="11" height="3" rx="1"/></svg>',
+  coords: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>',
+  help: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.2 9a2.9 2.9 0 0 1 5.6 1c0 2-2.8 2.2-2.8 4"/><path d="M12 17h.01"/></svg>'
+};
+var NAV = [
+  { id: 'convert', label: '单曲转换' },
+  { id: 'batch', label: '批量转换' },
+  { id: 'coords', label: '黑键坐标' },
+  { id: 'help', label: '使用说明' }
+];
+function buildNav(){
+  var html = '';
+  NAV.forEach(function(n, i){
+    if (i === 2) html += '<div class="sep"></div>';
+    html += '<button data-view="' + n.id + '" type="button">' + ICONS[n.id] + '<span>' + n.label + '</span></button>';
+  });
+  html += '<div class="sep"></div><div class="tiny">作者 珂眠<br>QQ 3787165824<br><span style="opacity:.7">© MIDQ 保留所有权利</span></div>';
+  $('navDesktop').innerHTML = html;
+  var m = '';
+  NAV.forEach(function(n){
+    m += '<button data-view="' + n.id + '" type="button">' + n.label + '</button>';
+  });
+  $('navMobile').innerHTML = m;
+  document.querySelectorAll('[data-view]').forEach(function(b){
+    b.addEventListener('click', function(){ go(this.getAttribute('data-view')); });
+  });
+}
+function go(view){
+  if (NAV.map(function(n){ return n.id; }).indexOf(view) < 0) view = 'convert';
+  Array.prototype.forEach.call(document.querySelectorAll('.view'), function(v){ v.classList.toggle('on', v.id === 'view-' + view); });
+  document.querySelectorAll('[data-view]').forEach(function(b){
+    if (b.getAttribute('data-view') === view) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
+  if (location.hash !== '#/' + view) history.replaceState(null, '', '#/' + view);
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+/* ============================================================
+   参数读取
+   ============================================================ */
+function numVal(id, dflt){
+  var v = parseFloat($(id).value);
+  return isNaN(v) ? dflt : v;
+}
+function clamp(v, a, b){ return v < a ? a : (v > b ? b : v); }
+function radioVal(name, dflt){
+  var el = document.querySelector('input[name="' + name + '"]:checked');
+  return el ? el.value : dflt;
+}
+function readOptions(){
+  var ch = $('opt-channel').value;
+  return {
+    baseNote: Math.round(clamp(numVal('opt-base', 60), 0, 127)),
+    transpose: Math.round(clamp(numVal('opt-transpose', 0), -24, 24)),
+    tempoMul: clamp(numVal('opt-speed', 1), 0.25, 4),
+    onlyChannel: (ch === 'all' || ch === 'nodrums') ? null : parseInt(ch, 10),
+    excludeDrums: ch === 'nodrums',
+    quantize: Math.round(clamp(numVal('opt-quantize', 0), 0, 200)),
+    minDelay: Math.round(clamp(numVal('opt-mindelay', 0), 0, 200)),
+    initialDelay: Math.round(clamp(numVal('opt-initdelay', 100), 0, 5000)),
+    mode: radioVal('mode', 'group'),
+    delayMode: $('opt-delaymode').value,
+    mouseBtn: radioVal('btn', 'Right'),
+    comments: radioVal('cmt', '1') === '1'
+  };
+}
+
+/* ============================================================
+   键盘键位预览
+   ============================================================ */
+var KB_ROWS = [
+  { row: -1, name: '低音行', letters: ['Z', 'X', 'C', 'V', 'B', 'N', 'M'] },
+  { row: 0, name: '中音行', letters: ['A', 'S', 'D', 'F', 'G', 'H', 'J'] },
+  { row: 1, name: '高音行', letters: ['Q', 'W', 'E', 'R', 'T', 'Y', 'U'] }
+];
+var WHITE_DEG = [0, 2, 4, 5, 7, 9, 11];
+var BLACK_DEG = [1, 3, 6, 8, 10];
+/* 半音 -> 简谱级数（与核心 DEG_TO_DEGREE 一致）：1,2,4,5,6 */
+var BLACK_NUM = [1, 2, 4, 5, 6];
+var DEG_NAME = { 0: '1', 1: '#1', 2: '2', 3: '#2', 4: '3', 5: '4', 6: '#4', 7: '5', 8: '#5', 9: '6', 10: '#6', 11: '7' };
+
+function renderKb(el){
+  if (!CORE || !el) return;
+  var h = '';
+  /* 高音行在上（与游戏键盘布局一致） */
+  KB_ROWS.slice().reverse().forEach(function(r){
+    var sign = r.row < 0 ? '-' : (r.row > 0 ? '+' : '');
+    var name = r.row < 0 ? '低音' : (r.row > 0 ? '高音' : '中音');
+    h += '<div class="kb-row"><div class="kb-clef">' + name + '</div><div class="kb-keys">';
+    WHITE_DEG.forEach(function(deg, i){
+      h += '<div class="kb-key">' + r.letters[i] +
+           '<span class="kn">' + sign + DEG_NAME[deg] + '</span></div>';
+    });
+    BLACK_DEG.forEach(function(deg, i){
+      var num = BLACK_NUM[i];
+      var c = (CORE.KB_BLACK[r.row] || {})[num] || [0, 0];
+      var left = ((i + 1) * (100 / 7) - 6.1).toFixed(2);
+      h += '<div class="kb-key b" style="left:' + left + '%">' +
+           '<span class="ck">' + DEG_NAME[deg] + '<br>' + c[0] + ',' + c[1] + '</span></div>';
+    });
+    h += '</div></div>';
+  });
+  el.innerHTML = h;
+}
+function renderKbAll(){ renderKb($('kbLayout')); renderKb($('kbLayout2')); }
+
+/* ============================================================
+   坐标设置（唯一持久化数据）
+   ============================================================ */
+var KEY_KB = 'midq.kb.v1';
+function saveKb(){
+  try { localStorage.setItem(KEY_KB, JSON.stringify(CORE.KB_BLACK)); } catch(e){}
+}
+function loadKb(){
+  try {
+    var raw = localStorage.getItem(KEY_KB);
+    if (!raw) return;
+    var obj = JSON.parse(raw);
+    var def = CORE.DEFAULT_BLACK;
+    for (var r in def){
+      if (!obj[r]) continue;
+      for (var d in def[r]){
+        var v = obj[r][d];
+        if (Array.isArray(v) && isFinite(v[0]) && isFinite(v[1])) CORE.KB_BLACK[r][d] = [Math.round(v[0]), Math.round(v[1])];
+      }
+    }
+  } catch(e){}
+}
+function renderCoordGrid(){
+  var g = $('coordGrid'), h = '';
+  KB_ROWS.slice().reverse().forEach(function(r){
+    var name = r.row < 0 ? '低音' : (r.row > 0 ? '高音' : '中音');
+    BLACK_DEG.forEach(function(deg, i){
+      var num = BLACK_NUM[i];
+      var v = (CORE.KB_BLACK[r.row] || {})[num] || [0, 0];
+      h += '<div class="ci">' +
+           '<div class="lab"><span class="rowtag">' + name + '</span>' + DEG_NAME[deg] + '</div>' +
+           '<input inputmode="numeric" pattern="[0-9]*" maxlength="5" ' +
+           'data-row="' + r.row + '" data-num="' + num + '" data-axis="0" value="' + v[0] + '" ' +
+           'aria-label="' + name + DEG_NAME[deg] + ' X">' +
+           '<input inputmode="numeric" pattern="[0-9]*" maxlength="5" ' +
+           'data-row="' + r.row + '" data-num="' + num + '" data-axis="1" value="' + v[1] + '" ' +
+           'aria-label="' + name + DEG_NAME[deg] + ' Y">' +
+           '</div>';
+    });
+  });
+  g.innerHTML = h;
+
+  Array.prototype.forEach.call(g.querySelectorAll('input'), function(inp){
+    inp.addEventListener('beforeinput', function(e){
+      if (e.data && /\D/.test(e.data)) e.preventDefault();
+    });
+    inp.addEventListener('paste', function(e){
+      e.preventDefault();
+      var txt = (e.clipboardData || window.clipboardData).getData('text') || '';
+      var parts = txt.split(/[,，\s]+/).map(function(s){ return s.replace(/\D/g, ''); }).filter(function(s){ return s !== ''; });
+      if (!parts.length) return;
+      var axis = +this.getAttribute('data-axis');
+      var row = this.getAttribute('data-row'), num = this.getAttribute('data-num');
+      this.value = parts[0];
+      applyCoord(row, num, axis, this.value);
+      if (parts[1] !== undefined){
+        var other = g.querySelector('input[data-row="' + row + '"][data-num="' + num + '"][data-axis="' + (1 - axis) + '"]');
+        if (other){ other.value = parts[1]; applyCoord(row, num, 1 - axis, parts[1]); }
+      }
+    });
+    inp.addEventListener('input', function(){
+      this.value = this.value.replace(/\D/g, '').slice(0, 5);
+      applyCoord(this.getAttribute('data-row'), this.getAttribute('data-num'), +this.getAttribute('data-axis'), this.value);
+    });
+    inp.addEventListener('blur', function(){
+      if (this.value === '') this.value = '0';
+      applyCoord(this.getAttribute('data-row'), this.getAttribute('data-num'), +this.getAttribute('data-axis'), this.value || '0');
+    });
+  });
+}
+var reconvertTimer = null;
+function applyCoord(row, num, axis, val){
+  var v = parseInt(val || '0', 10);
+  if (isNaN(v)) v = 0;
+  v = clamp(v, 0, 10000);
+  if (!CORE.KB_BLACK[row]) CORE.KB_BLACK[row] = {};
+  var cur = CORE.KB_BLACK[row][num] || [0, 0];
+  cur = [cur[0], cur[1]];
+  cur[axis] = v;
+  CORE.KB_BLACK[row][num] = cur;
+  saveKb();
+  renderKbAll();
+  if (state.midi){
+    clearTimeout(reconvertTimer);
+    reconvertTimer = setTimeout(function(){ doConvert(true); }, 500);
+  }
+}
+function resetCoords(){
+  var def = CORE.DEFAULT_BLACK;
+  for (var r in def){
+    if (!CORE.KB_BLACK[r]) CORE.KB_BLACK[r] = {};
+    for (var d in def[r]) CORE.KB_BLACK[r][d] = [def[r][d][0], def[r][d][1]];
+  }
+  saveKb();
+  renderCoordGrid();
+  renderKbAll();
+  toast('坐标已恢复默认');
+  if (state.midi) doConvert(true);
+}
+
+/* ============================================================
+   单曲转换
+   ============================================================ */
+var state = { midi: null, fileName: '', title: '', b64: '', res: null, verify: null, qtext: '' };
+
+function readFileAsText(file){
+  return new Promise(function(res, rej){
+    var r = new FileReader();
+    r.onload = function(){ res(String(r.result || '')); };
+    r.onerror = function(){ rej(r.error || new Error('读取失败')); };
+    r.readAsText(file);
+  });
+}
+function readFileAsBuffer(file){
+  return new Promise(function(res, rej){
+    var r = new FileReader();
+    r.onload = function(){ res(r.result); };
+    r.onerror = function(){ rej(r.error || new Error('读取失败')); };
+    r.readAsArrayBuffer(file);
+  });
+}
+function readFileAsB64(file){
+  return new Promise(function(res, rej){
+    var r = new FileReader();
+    r.onload = function(){
+      var s = String(r.result || ''), i = s.indexOf(',');
+      res(i >= 0 ? s.slice(i + 1) : s);
+    };
+    r.onerror = function(){ rej(r.error || new Error('读取失败')); };
+    r.readAsDataURL(file);
+  });
+}
+
+function setFile(buf, fileName){
+  var midi;
+  try { midi = CORE.parseMIDI(buf); }
+  catch(e){ toast('MIDI 解析失败：' + (e && e.message || e)); return false; }
+
+  var rawName = String(fileName || '');
+  var base = CORE.sanitizeTitle(rawName);
+  if (!base || base === 'MIDQ' || /^midi$/i.test(base)) base = CORE.sanitizeTitle(midi.name || 'MIDQ');
+
+  state.midi = midi;
+  state.fileName = rawName;
+  state.title = base;
+  state.b64 = '';
+  state.res = null;
+  state.verify = null;
+  state.qtext = '';
+
+  $('fileStrip').classList.remove('hidden');
+  $('fileName').textContent = rawName || (base + '.mid');
+  $('fileMeta').textContent = midi.notes.length + ' 音符 · ' + midi.tempos.length + ' 拍速段 · TPQ ' + midi.tpq + ' · 格式 Type' + midi.format;
+  $('resultNote').textContent = '已载入，等待转换';
+  return true;
+}
+
+function doConvert(silent){
+  if (!state.midi){ toast('请先导入 MIDI 文件'); return; }
+  var opts = readOptions();
+  var res, ver;
+  try {
+    res = CORE.convertMidi(state.midi, opts);
+    ver = CORE.verifyTiming(res.timing);
+  } catch(e){
+    toast('转换失败：' + (e && e.message || e));
+    return;
+  }
+  state.res = res;
+  state.verify = ver;
+  state.qtext = CORE.buildQFile(res.text, state.title);
+  renderResult();
+  if (!silent) toast(ver.pass ? '转换完成 · 时间校验通过' : '转换完成，但存在时间偏差，请检查参数');
+}
+
+function fmtMs(ms){
+  ms = Math.round(ms);
+  if (ms < 1000) return ms + ' ms';
+  var s = ms / 1000;
+  return (s >= 60 ? (Math.floor(s / 60) + 'm ' + (s % 60).toFixed(2) + 's') : s.toFixed(2) + 's') + ' (' + ms + 'ms)';
+}
+var SVG_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>';
+var SVG_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>';
+var SVG_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9v4m0 4h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+
+function renderResult(){
+  var r = state.res, v = state.verify;
+  if (!r) return;
+  $('stNotes').textContent = r.stats.notes;
+  $('stGroups').textContent = r.stats.groups;
+  $('stLines').textContent = r.stats.lines;
+  $('stDur').textContent = (Math.round(r.stats.durationMs / 1000 * 100) / 100) + 's / ' + (Math.round(r.stats.midiDurationMs / 1000 * 100) / 100) + 's';
+  $('stDrift').textContent = v.maxDriftMs + ' ms';
+  $('stEnd').textContent = v.endDriftMs + ' ms';
+  $('stTempo').textContent = r.stats.tempoEvents + ' / ' + r.stats.tpq;
+  $('stRange').textContent = r.stats.minNote + '–' + r.stats.maxNote + '（超范围 ' + r.stats.outRange + '）';
+
+  var rep = $('report');
+  rep.classList.toggle('pass', !!v.pass);
+  rep.classList.toggle('warn', !v.pass);
+  var ic = rep.querySelector('.rh svg');
+  if (ic) ic.outerHTML = v.pass ? SVG_CHECK : SVG_WARN;
+  $('reportTitle').textContent = v.pass ? '逐组时间校验通过' : '存在时间偏差';
+  $('reportNote').textContent = v.pass
+    ? '每组起始误差 ≤ 2ms，结束偏差 ' + v.endDriftMs + 'ms'
+    : '最大偏差 ' + v.maxDriftMs + 'ms（第 ' + (v.worstGroup + 1) + ' 组），提前组 ' + v.earlyGroups;
+
+  $('resultNote').textContent = state.title + '.Q · ' + r.stats.lines + ' 行';
+  $('codeInfo').textContent = '文件名：' + state.title + '.Q · 描述：' + state.title;
+  $('outNote').textContent = '输出：' + state.title + '.Q · 描述=' + state.title;
+
+  renderCode(state.qtext);
+  $('btnConfirmDownload').disabled = false;
+  $('btnConfirmZip').disabled = false;
+}
+
+function renderCode(text){
+  var lines = text.split(/\r?\n/);
+  var h = '';
+  for (var i = 0; i < Math.min(lines.length, 400); i++){
+    var l = lines[i];
+    if (/^(MoveTo |LeftDown|LeftUp|RightDown|RightUp|Delay |KeyDown |KeyUp )/.test(l)) h += '<span class="cmd">' + esc(l) + '</span>\n';
+    else if (/^[';]/.test(l) || /^F10 start/.test(l)) h += '<span class="cm">' + esc(l) + '</span>\n';
+    else if (/^\[/.test(l)) h += '<span class="cm">' + esc(l) + '</span>\n';
+    else if (/^Description=/i.test(l)) h += '<span class="hl">' + esc(l) + '</span>\n';
+    else h += esc(l) + '\n';
+  }
+  if (lines.length > 400) h += '\n<span class="cm">… 共 ' + lines.length + ' 行，已截断预览</span>';
+  $('preview').innerHTML = h;
+}
+function esc(s){ return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function downloadBlob(blob, name){
+  var a = document.createElement('a');
+  var url = URL.createObjectURL(blob);
+  a.href = url; a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
+}
+function qBlob(qtext){
+  return new Blob(['\ufeff' + qtext], { type: 'application/octet-stream' });
+}
+function downloadQ(){
+  if (!state.res){ toast('请先转换'); return; }
+  downloadBlob(qBlob(state.qtext), state.title + '.Q');
+  toast('已下载 ' + state.title + '.Q');
+}
+function downloadSingleZip(){
+  if (!state.res){ toast('请先转换'); return; }
+  var zip = CORE.makeZip([{ name: state.title + '.Q', data: state.qtext }]);
+  downloadBlob(new Blob([zip], { type: 'application/zip' }), state.title + '.zip');
+  toast('已打包下载 ' + state.title + '.zip');
+}
+function copyScript(){
+  if (!state.res){ toast('请先转换'); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(state.qtext).then(function(){ toast('脚本已复制到剪贴板'); }, function(){ fallbackCopy(state.qtext); });
+  } else fallbackCopy(state.qtext);
+}
+function fallbackCopy(txt){
+  var ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); toast('脚本已复制'); } catch(e){ toast('复制失败，请手动选择'); }
+  ta.remove();
+}
+
+/* ============================================================
+   批量转换
+   ============================================================ */
+var batch = [];
+var batchRunning = false;
+
+function addBatchFiles(files){
+  var list = Array.prototype.slice.call(files || []);
+  var added = 0;
+  list.forEach(function(f){
+    if (!/\.(mid|midi)$/i.test(f.name)) return;
+    batch.push({ file: f, name: f.name, sub: f.webkitRelativePath || '' });
+    added++;
+  });
+  renderBatch();
+  if (added) toast('已加入 ' + added + ' 首曲目');
+  else toast('未发现 MIDI 文件');
+}
+function renderBatch(){
+  var q = $('batchQueue');
+  if (!batch.length){
+    q.innerHTML = '<div class="qi" style="color:var(--faint)">队列为空</div>';
+    $('btnBatchGo').disabled = true;
+    $('btnBatchZip').disabled = true;
+    return;
+  }
+  var h = '';
+  batch.forEach(function(it, i){
+    var st = it.status || 'wait';
+    var txt = { wait: '待转换', run: '转换中', ok: '完成', err: '失败' }[st];
+    var cls = st === 'run' ? 'run' : (st === 'ok' ? 'ok' : (st === 'err' ? 'err' : ''));
+    h += '<div class="qi"><span class="qi-no">' + (i + 1) + '</span>' +
+         '<span class="qi-name" title="' + esc(it.name) + '">' + esc(it.name) + '</span>' +
+         '<span class="qi-sub">' + esc(it.sub || '—') + '</span>' +
+         '<span class="qi-state ' + cls + '">' + txt + '</span></div>';
+  });
+  q.innerHTML = h;
+  $('btnBatchGo').disabled = batchRunning;
+  $('btnBatchZip').disabled = batchRunning;
+}
+function batchOpts(){ return readOptions(); }
+
+async function convOne(it){
+  var buf = await readFileAsBuffer(it.file);
+  var midi = CORE.parseMIDI(buf);
+  var title = CORE.sanitizeTitle(it.name) || CORE.sanitizeTitle(midi.name || 'MIDQ');
+  var res = CORE.convertMidi(midi, batchOpts());
+  var ver = CORE.verifyTiming(res.timing);
+  return { title: title, res: res, ver: ver, q: CORE.buildQFile(res.text, title) };
+}
+
+async function runBatch(){
+  if (!batch.length){ toast('队列为空'); return; }
+  if (batchRunning) return;
+  batchRunning = true;
+  renderBatch();
+  var prog = $('batchProgress');
+  prog.classList.add('on');
+  var bar = prog.querySelector('i');
+  bar.style.width = '0%';
+  var rs = $('batchResult');
+  rs.classList.remove('on', 'bad');
+  rs.textContent = '';
+
+  var done = 0, okCount = 0, failCount = 0, out = [];
+  for (var i = 0; i < batch.length; i++){
+    var it = batch[i];
+    it.status = 'run';
+    renderBatch();
+    try {
+      var r = await convOne(it);
+      out.push({ src: it, r: r });
+      it.status = 'ok';
+      it.outName = r.title + '.Q';
+      okCount++;
+    } catch(e){
+      it.status = 'err';
+      it.error = (e && e.message || String(e));
+      failCount++;
+    }
+    done++;
+    bar.style.width = Math.round(done / batch.length * 100) + '%';
+    await new Promise(function(r){ setTimeout(r, 0); });
+  }
+  batchRunning = false;
+  batch.lastOut = out;
+  renderBatch();
+
+  var drift = 0;
+  out.forEach(function(o){ if (o.r.ver.maxDriftMs > drift) drift = o.r.ver.maxDriftMs; });
+  rs.classList.add('on');
+  if (failCount) rs.classList.add('bad');
+  rs.innerHTML = '转换 <b>' + batch.length + '</b> 首 · 成功 <b>' + okCount + '</b>' + (failCount ? ' · 失败 <b>' + failCount + '</b>' : '') +
+    ' · 最大时间偏差 <b>' + (drift ? drift + ' ms' : '0 ms') + '</b>' +
+    (failCount ? '<div class="errs">' + batch.filter(function(b){ return b.status === 'err'; }).map(function(b){ return esc(b.name) + '：' + esc(b.error); }).join('<br>') + '</div>' : '');
+  toast('批量转换完成');
+}
+
+async function batchToFolder(){
+  if (!batch.length){ toast('队列为空'); return; }
+  if (!window.showDirectoryPicker){ toast('当前浏览器不支持写入文件夹，请使用 ZIP 下载'); return; }
+  var dir;
+  try { dir = await window.showDirectoryPicker({ mode: 'readwrite' }); }
+  catch(e){ return; }
+  var subName = ($('batchSubdir').value || '').replace(/[\\/:*?"<>|]/g, '_').trim();
+  var root = dir;
+  if (subName){ root = await dir.getDirectoryHandle(subName, { create: true }); toast('已创建/进入子文件夹 ' + subName); }
+
+  await runBatch();
+  var out = batch.lastOut || [];
+  var saved = 0;
+  for (var i = 0; i < out.length; i++){
+    var o = out[i];
+    try {
+      var parts = o.src.sub ? o.src.sub.split('/') : [];
+      if (parts.length > 1) parts = parts.slice(1); /* 去掉所选文件夹本身的顶层 */
+      parts.pop(); /* 去掉文件名 */
+      var target = root;
+      for (var p = 0; p < parts.length; p++){
+        if (!parts[p]) continue;
+        target = await target.getDirectoryHandle(parts[p], { create: true });
+      }
+      var fh = await target.getFileHandle(o.r.title + '.Q', { create: true });
+      var w = await fh.createWritable();
+      await w.write(new Blob(['\ufeff' + o.r.q]));
+      await w.close();
+      saved++;
+    } catch(e){ /* 单个写入失败不影响整体 */ }
+  }
+  var rs = $('batchResult');
+  rs.classList.remove('bad');
+  rs.classList.add('on');
+  rs.innerHTML = '已写入文件夹 <b>' + saved + '</b> / ' + out.length + ' 个 Q 文件（文件名与描述均为曲名）';
+  toast('已保存 ' + saved + ' 个文件');
+}
+
+async function batchZip(){
+  if (!batch.length){ toast('队列为空'); return; }
+  await runBatch();
+  var out = batch.lastOut || [];
+  if (!out.length){ toast('没有可打包的曲目'); return; }
+  var subName = ($('batchSubdir').value || '').replace(/[\\/:*?"<>|]/g, '_').trim();
+  var entries = out.map(function(o){
+    var parts = o.src.sub ? o.src.sub.split('/') : [];
+    if (parts.length > 1) parts = parts.slice(1);
+    parts.pop();
+    var dirPart = parts.filter(Boolean).join('/');
+    var base = o.r.title + '.Q';
+    var name = (subName ? subName + '/' : '') + (dirPart ? dirPart + '/' : '') + base;
+    return { name: name, data: o.r.q };
+  });
+  var zip = CORE.makeZip(entries);
+  var d = new Date(), pad = function(n){ return ('0' + n).slice(-2); };
+  var zipName = (subName ? subName : 'MIDQ') + '_' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.zip';
+  downloadBlob(new Blob([zip], { type: 'application/zip' }), zipName);
+  toast('已打包下载 ' + entries.length + ' 首曲目');
+}
+
+/* ============================================================
+   初始化
+   ============================================================ */
+var inited = false;
+function initApp(){
+  if (inited) return;
+  inited = true;
+  buildNav();
+  loadKb();
+  renderCoordGrid();
+  renderKbAll();
+
+  /* 主题 */
+  document.querySelectorAll('#themes button').forEach(function(b){
+    b.addEventListener('click', function(){ applyTheme(this.getAttribute('data-theme')); });
+  });
+
+  /* 拖放 */
+  var drop = $('drop');
+  drop.setAttribute('role', 'button');
+  drop.setAttribute('tabindex', '0');
+  drop.addEventListener('click', function(e){
+    if (e.target.closest && e.target.closest('.acts')) return;
+    $('fileInput').click();
+  });
+  drop.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('fileInput').click(); }
+  });
+  ['dragenter', 'dragover'].forEach(function(ev){
+    drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('drag'); });
+  });
+  ['dragleave', 'drop'].forEach(function(ev){
+    drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('drag'); });
+  });
+  drop.addEventListener('drop', function(e){
+    var fs = e.dataTransfer.files;
+    if (!fs || !fs.length) return;
+    if (fs.length > 1){ go('batch'); addBatchFiles(fs); return; }
+    var f = fs[0];
+    if (!/\.(mid|midi)$/i.test(f.name)){ toast('请导入 .mid / .midi 文件'); return; }
+    readFileAsBuffer(f).then(function(buf){
+      if (setFile(buf, f.name)) doConvert(false);
+    });
+  });
+
+  /* 文件选择 */
+  $('btnPickFile').addEventListener('click', function(){ $('fileInput').click(); });
+  $('fileInput').addEventListener('change', function(){
+    var fs = this.files;
+    if (!fs || !fs.length) return;
+    if (fs.length > 1){ go('batch'); addBatchFiles(fs); this.value = ''; return; }
+    var f = fs[0];
+    readFileAsBuffer(f).then(function(buf){ if (setFile(buf, f.name)) doConvert(false); });
+    this.value = '';
+  });
+  $('btnDemo').addEventListener('click', function(){
+    try {
+      var raw = b64ToBytes(CORE.DEMO_MIDI_B64);
+      if (setFile(raw.buffer, 'MIDQ 示例曲.mid')) doConvert(false);
+    } catch(e){ toast('示例加载失败'); }
+  });
+  $('btnClearFile').addEventListener('click', function(){
+    state = { midi: null, fileName: '', title: '', b64: '', res: null, verify: null, qtext: '' };
+    $('fileStrip').classList.add('hidden');
+    $('resultNote').textContent = '等待导入 MIDI';
+    $('reportTitle').textContent = '尚未转换';
+    $('reportNote').textContent = '—';
+    $('report').classList.remove('warn');
+    $('report').classList.remove('pass');
+    var ric = $('report').querySelector('.rh svg');
+    if (ric) ric.outerHTML = SVG_INFO;
+    ['stNotes','stGroups','stLines','stDur','stDrift','stEnd','stTempo','stRange'].forEach(function(id){ $(id).textContent = '—'; });
+    $('preview').innerHTML = '<span class="cm">导入 MIDI 后在此显示生成的 Q 脚本</span>';
+    $('btnConfirmDownload').disabled = true;
+    $('btnConfirmZip').disabled = true;
+    $('codeInfo').textContent = '曲名将用于文件名与脚本描述';
+  });
+
+  /* 参数联动 */
+  ['opt-base','opt-transpose','opt-speed','opt-channel','opt-delaymode','opt-quantize','opt-mindelay','opt-initdelay'].forEach(function(id){
+    $(id).addEventListener('change', function(){
+      if (id === 'opt-speed'){
+        var s = clamp(numVal('opt-speed', 1), 0.25, 4);
+        $('speedNote').textContent = '速度 ' + s.toFixed(2) + '× ' + (Math.abs(s - 1) < 1e-9 ? '· 原速锁定' : '· 已变速');
+      }
+      if (state.midi) doConvert(true);
+    });
+  });
+  document.querySelectorAll('input[name="mode"],input[name="btn"],input[name="cmt"]').forEach(function(r){
+    r.addEventListener('change', function(){ if (state.midi) doConvert(true); });
+  });
+
+  /* 结果操作 */
+  $('btnConfirmDownload').addEventListener('click', downloadQ);
+  $('btnConfirmZip').addEventListener('click', downloadSingleZip);
+  $('btnCopy').addEventListener('click', copyScript);
+
+  /* 标签页 */
+  document.querySelectorAll('[data-tab]').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('[data-tab]').forEach(function(x){ x.setAttribute('aria-selected', 'false'); });
+      this.setAttribute('aria-selected', 'true');
+      var t = this.getAttribute('data-tab');
+      $('paneCode').classList.toggle('hidden', t !== 'code');
+      $('paneKeys').classList.toggle('hidden', t !== 'keys');
+    });
+  });
+
+  /* 坐标 */
+  $('btnResetCoords').addEventListener('click', resetCoords);
+
+  /* 批量 */
+  $('btnBatchAdd').addEventListener('click', function(){ $('batchInput').click(); });
+  $('batchInput').addEventListener('change', function(){ addBatchFiles(this.files); this.value = ''; });
+  $('btnBatchFolder').addEventListener('click', function(){ $('batchFolderInput').click(); });
+  $('batchFolderInput').addEventListener('change', function(){ addBatchFiles(this.files); this.value = ''; });
+  $('btnBatchClear').addEventListener('click', function(){
+    if (batchRunning) return;
+    batch = []; $('batchResult').classList.remove('on'); renderBatch(); toast('队列已清空');
+  });
+  $('btnBatchGo').addEventListener('click', batchToFolder);
+  $('btnBatchZip').addEventListener('click', batchZip);
+
+  go((location.hash || '').replace('#/', '') || 'convert');
+  window.addEventListener('hashchange', function(){ go((location.hash || '').replace('#/', '') || 'convert'); });
+}
+
+/* ============================================================
+   启动
+   ============================================================ */
+(function boot(){
+  if (BOOT_MODE === 'plain'){
+    try { execCore(getPayloadText()); enterApp(); }
+    catch(e){
+      document.body.innerHTML = '<p style="padding:40px;font-family:sans-serif">核心加载失败：' + (e && e.message || e) + '</p>';
+    }
+    return;
+  }
+  showGate();
+  $('licBtn').addEventListener('click', tryLicense);
+  $('licInput').addEventListener('keydown', function(e){ if (e.key === 'Enter') tryLicense(); });
+  $('licInput').addEventListener('input', function(){ if (this.value) $('licErr').textContent = ''; });
+  setTimeout(function(){ try { $('licInput').focus(); } catch(e){} }, 120);
+})();
+</script>
+</body>
+</html>
