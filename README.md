@@ -63,7 +63,7 @@ MIDI 精确转换为按键精灵 Q 脚本的单页工具。
 
 ## 本地文件
 
-- `index.html` / `MIDQ.html` —— 发布产物（同一份，均为 308,714 B）。
+- `index.html` / `MIDQ.html` —— 发布产物（同一份，均为 310,063 B）。
 - `_src/MIDQ.src.html` —— 唯一模板；`_src/MIDQ.plain.html` —— 明文调试版。
 - `core_src.js` —— 转换内核源码；`build.js` —— 构建脚本。
 - `_tools/` —— 回归测试与发布脚本；`_shots_round9/` 为本轮截图（其余 `_shots_roundN/` 为历轮）。
