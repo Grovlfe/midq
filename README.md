@@ -73,8 +73,8 @@ MIDI 精确转换为按键精灵 Q 脚本的单页工具。
 
 ## 本地文件
 
-- `index.html` / `MIDQ.html` —— 发布产物（同一份，均为 3,516,022 B）。
-- `_src/MIDQ.src.html` —— 唯一模板；`_src/MIDQ.plain.html` —— 明文调试版（3,507,128 B）。
+- `index.html` / `MIDQ.html` —— 发布产物（同一份，均为 3,516,075 B）。
+- `_src/MIDQ.src.html` —— 唯一模板；`_src/MIDQ.plain.html` —— 明文调试版（3,507,181 B）。
 - `core_src.js` —— 转换内核源码；`build.js` —— 构建脚本。
 - `_src/piano_assets.js` —— 30 个键位锚点的 Base64 音源；`_audio/` 为对应 MP3 采样。
 - `_tools/` —— 回归测试与发布脚本；`_shots_round10/` 为本轮截图（其余 `_shots_roundN/` 为历轮）。
